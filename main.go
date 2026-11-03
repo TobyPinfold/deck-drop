@@ -5,6 +5,7 @@ import (
 	"embed"
 	"log/slog"
 	"os"
+	"time"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
 
@@ -13,8 +14,20 @@ import (
 	"github.com/TobyPinfold/deck-drop/internal/discovery"
 )
 
+const (
+	scanDuration = 3 * time.Second
+	scanInterval = 2 * time.Second
+
+	devicesEvent = "devices"
+)
+
 //go:embed all:frontend/dist
 var assets embed.FS
+
+func init() {
+	// Registering the event type gives the frontend typed bindings for it.
+	application.RegisterEvent[[]discovery.Device](devicesEvent)
+}
 
 // service exposes the app to the frontend and ties it to the application
 // lifecycle. Only its exported methods are callable from the frontend.
@@ -32,6 +45,11 @@ func (service *service) ServiceShutdown() error {
 	return nil
 }
 
+// Devices lists the other DeckDrop devices currently on the network.
+func (service *service) Devices() []discovery.Device {
+	return service.app.Devices()
+}
+
 // Info reports whether the backend is running and where.
 func (service *service) Info() app.Info {
 	return service.app.Info()
@@ -46,10 +64,19 @@ func main() {
 		config.ReceiveDir = app.DefaultReceiveDir(homeDir)
 	}
 
-	desktop := application.New(application.Options{
+	var desktop *application.App
+	deckDrop := app.New(logger, config, app.Options{
+		Scanner:      discovery.MDNSScanner{Duration: scanDuration},
+		ScanInterval: scanInterval,
+		OnDevicesChanged: func(devices []discovery.Device) {
+			desktop.Event.Emit(devicesEvent, devices)
+		},
+	})
+
+	desktop = application.New(application.Options{
 		Name:        "DeckDrop",
 		Description: "Steam Deck first local network file sharing",
-		Services:    []application.Service{application.NewService(&service{app: app.New(logger, config)})},
+		Services:    []application.Service{application.NewService(&service{app: deckDrop})},
 		Assets:      application.AssetOptions{Handler: application.AssetFileServerFS(assets)},
 		Mac: application.MacOptions{
 			ApplicationShouldTerminateAfterLastWindowClosed: true,

@@ -17,7 +17,7 @@ func newTestApp(t *testing.T) *App {
 	config := backend.DefaultConfig()
 	config.Port = 0
 	config.ReceiveDir = t.TempDir()
-	return New(slog.New(slog.NewTextHandler(io.Discard, nil)), config)
+	return New(slog.New(slog.NewTextHandler(io.Discard, nil)), config, Options{})
 }
 
 func TestStartupStartsTheBackendAndShutdownStopsIt(t *testing.T) {
@@ -46,7 +46,7 @@ func TestStartupReportsAFailureToStartTheBackend(t *testing.T) {
 	app.Startup(context.Background())
 	defer app.Shutdown(context.Background())
 
-	second := New(slog.New(slog.NewTextHandler(io.Discard, nil)), backend.Config{Port: app.Info().Port, ReceiveDir: t.TempDir()})
+	second := New(slog.New(slog.NewTextHandler(io.Discard, nil)), backend.Config{Port: app.Info().Port, ReceiveDir: t.TempDir()}, Options{})
 	second.Startup(context.Background())
 
 	if second.Info().Running {
