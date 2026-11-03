@@ -26,6 +26,7 @@ type Backend struct {
 	mu       sync.Mutex
 	server   *http.Server
 	listener net.Listener
+	served   chan struct{}
 }
 
 // New returns a stopped Backend that logs to logger.
@@ -54,14 +55,17 @@ func (backend *Backend) Start() error {
 	}
 	backend.server = server
 	backend.listener = listener
+	backend.served = make(chan struct{})
 
-	go backend.serve(server, listener)
+	go backend.serve(server, listener, backend.served)
 
 	backend.log.Info("backend started", "addr", listener.Addr().String())
 	return nil
 }
 
-func (backend *Backend) serve(server *http.Server, listener net.Listener) {
+func (backend *Backend) serve(server *http.Server, listener net.Listener, served chan<- struct{}) {
+	defer close(served)
+
 	if err := server.Serve(listener); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		backend.log.Error("http server failed", "error", err)
 	}
@@ -81,8 +85,10 @@ func (backend *Backend) Stop() error {
 	defer cancel()
 
 	err := backend.server.Shutdown(ctx)
+	<-backend.served // Serve closes the listener on return, so the port is free afterwards
 	backend.server = nil
 	backend.listener = nil
+	backend.served = nil
 	if err != nil {
 		return fmt.Errorf("shut down http server: %w", err)
 	}
