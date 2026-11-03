@@ -6,6 +6,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -201,4 +202,54 @@ func TestResumingFromReportedSizeCompletesFile(t *testing.T) {
 	writeChunk(t, receiver, "resumed.bin", int(resumeOffset), content[resumeOffset:])
 
 	assertFileContent(t, directory, "resumed.bin", content)
+}
+
+func TestWriteChunkRejectsUnsafeNames(t *testing.T) {
+	receiver, directory := newTestReceiver(t)
+	names := map[string]string{
+		"too long":          strings.Repeat("a", 256),
+		"backslash":         `folder\file.bin`,
+		"null byte":         "file\x00.bin",
+		"control character": "file\tname.bin",
+		"colon":             "file:stream.bin",
+		"wildcard":          "file*.bin",
+		"question mark":     "file?.bin",
+		"angle brackets":    "<file>.bin",
+		"quote":             `"file".bin`,
+		"pipe":              "file|name.bin",
+		"reserved device":   "CON",
+		"reserved with ext": "nul.txt",
+		"reserved numbered": "com1.bin",
+		"trailing dot":      "file.",
+		"trailing space":    "file ",
+		"invalid utf-8":     "file\xff.bin",
+	}
+
+	for description, name := range names {
+		_, err := receiver.WriteChunk(name, 0, bytes.NewReader([]byte("data")))
+
+		if !errors.Is(err, ErrInvalidName) {
+			t.Errorf("%s: WriteChunk(%q) error = %v, want ErrInvalidName", description, name, err)
+		}
+	}
+
+	if entries, err := os.ReadDir(directory); err != nil || len(entries) != 0 {
+		t.Fatalf("directory should stay empty, got %v (err: %v)", entries, err)
+	}
+}
+
+func TestWriteChunkAcceptsOrdinaryNames(t *testing.T) {
+	receiver, directory := newTestReceiver(t)
+	names := []string{
+		"game save (1).tar.gz",
+		"ünïcode-名前.bin",
+		".hidden-config",
+		"console.log",
+		strings.Repeat("a", 255),
+	}
+
+	for _, name := range names {
+		writeChunk(t, receiver, name, 0, []byte("data"))
+		assertFileContent(t, directory, name, []byte("data"))
+	}
 }
