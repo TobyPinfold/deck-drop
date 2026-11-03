@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	"github.com/TobyPinfold/deck-drop/internal/identity"
+	"github.com/TobyPinfold/deck-drop/internal/offer"
 	"github.com/TobyPinfold/deck-drop/internal/pairing"
 	"github.com/TobyPinfold/deck-drop/internal/transfer"
 	"github.com/TobyPinfold/deck-drop/internal/trust"
@@ -26,7 +27,7 @@ type receiverFixture struct {
 	pairing   *pairing.Manager
 }
 
-func startPairingBackend(t *testing.T) receiverFixture {
+func startPairingBackend(t *testing.T, offers offer.Decider) receiverFixture {
 	t.Helper()
 
 	receiverIdentity, err := identity.Generate()
@@ -42,7 +43,7 @@ func startPairingBackend(t *testing.T) receiverFixture {
 	logger := slog.New(slog.NewTextHandler(&bytes.Buffer{}, nil))
 	running := New(logger, Config{
 		ReceiveDir: directory, DeviceName: "receiver",
-		Identity: receiverIdentity, Trust: store, Pairing: manager,
+		Identity: receiverIdentity, Trust: store, Pairing: manager, Offers: offers,
 	})
 	if err := running.Start(); err != nil {
 		t.Fatal(err)
@@ -65,7 +66,7 @@ func sendFile(t *testing.T, sender transfer.Sender, address, fingerprint string)
 }
 
 func TestUnpairedDeviceCannotUpload(t *testing.T) {
-	fixture := startPairingBackend(t)
+	fixture := startPairingBackend(t, nil)
 	sender, err := identity.Generate()
 	if err != nil {
 		t.Fatal(err)
@@ -82,7 +83,7 @@ func TestUnpairedDeviceCannotUpload(t *testing.T) {
 }
 
 func TestDeviceWithoutACertificateCannotUpload(t *testing.T) {
-	fixture := startPairingBackend(t)
+	fixture := startPairingBackend(t, nil)
 	err := sendFile(t, transfer.Sender{Secure: true}, fixture.address, "")
 	if !errors.Is(err, transfer.ErrNotPaired) {
 		t.Fatalf("Send() error = %v, want ErrNotPaired", err)
@@ -90,7 +91,7 @@ func TestDeviceWithoutACertificateCannotUpload(t *testing.T) {
 }
 
 func TestPairedDeviceCanUploadUntilUnpaired(t *testing.T) {
-	fixture := startPairingBackend(t)
+	fixture := startPairingBackend(t, nil)
 	sender, _ := identity.Generate()
 	code, err := fixture.pairing.NewCode()
 	if err != nil {
@@ -122,7 +123,7 @@ func TestPairedDeviceCanUploadUntilUnpaired(t *testing.T) {
 }
 
 func TestWrongCodeDoesNotPair(t *testing.T) {
-	fixture := startPairingBackend(t)
+	fixture := startPairingBackend(t, nil)
 	sender, _ := identity.Generate()
 	if _, err := fixture.pairing.NewCode(); err != nil {
 		t.Fatal(err)
@@ -138,7 +139,7 @@ func TestWrongCodeDoesNotPair(t *testing.T) {
 }
 
 func TestPairingWithoutAnActiveCodeFails(t *testing.T) {
-	fixture := startPairingBackend(t)
+	fixture := startPairingBackend(t, nil)
 	sender, _ := identity.Generate()
 
 	_, err := pairing.Pair(context.Background(), sender, "laptop", fixture.address, "123456")
@@ -148,7 +149,7 @@ func TestPairingWithoutAnActiveCodeFails(t *testing.T) {
 }
 
 func TestPairingBruteForceIsStopped(t *testing.T) {
-	fixture := startPairingBackend(t)
+	fixture := startPairingBackend(t, nil)
 	sender, _ := identity.Generate()
 	code, _ := fixture.pairing.NewCode()
 

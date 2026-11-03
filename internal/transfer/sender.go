@@ -1,7 +1,9 @@
 package transfer
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -10,6 +12,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 
 	"github.com/TobyPinfold/deck-drop/internal/identity"
 )
@@ -19,6 +22,14 @@ const defaultChunkSize = 8 << 20
 // ErrNotPaired means the device refused the upload because this device has
 // not been paired with it.
 var ErrNotPaired = errors.New("this device is not paired with the receiver")
+
+// ErrDeclined means the receiver declined the files, or nobody answered.
+var ErrDeclined = errors.New("the receiver declined the files")
+
+// ErrNotAccepted means the receiver has no accepted offer for the file, for
+// example because it restarted since accepting. Offering the file again asks
+// the user again.
+var ErrNotAccepted = errors.New("the receiver has not accepted this file")
 
 // Sender uploads files to another DeckDrop device in chunks.
 type Sender struct {
@@ -118,6 +129,9 @@ func (sender Sender) receivedSize(ctx context.Context, client *http.Client, base
 	if response.StatusCode == http.StatusForbidden {
 		return 0, ErrNotPaired
 	}
+	if response.StatusCode == http.StatusPreconditionRequired {
+		return 0, ErrNotAccepted
+	}
 	if response.StatusCode != http.StatusOK {
 		return 0, fmt.Errorf("check progress of %q: %s", name, response.Status)
 	}
@@ -148,6 +162,9 @@ func (sender Sender) uploadChunk(ctx context.Context, client *http.Client, baseU
 
 	if response.StatusCode == http.StatusForbidden {
 		return ErrNotPaired
+	}
+	if response.StatusCode == http.StatusPreconditionRequired {
+		return ErrNotAccepted
 	}
 	if response.StatusCode != http.StatusNoContent {
 		return fmt.Errorf("upload %q at %d: %s", name, offset, response.Status)
@@ -187,4 +204,57 @@ func (reader *progressReader) Read(buffer []byte) (int, error) {
 		reader.progress(reader.sent, reader.total)
 	}
 	return count, err
+}
+
+// Offer asks the device at address whether it will accept the files at paths,
+// and waits for the answer, which can take as long as the user needs. It
+// returns ErrDeclined if the files are declined. Nothing is sent.
+func (sender Sender) Offer(ctx context.Context, address, fingerprint string, paths []string) error {
+	files := make([]offerFile, 0, len(paths))
+	for _, path := range paths {
+		info, err := os.Stat(path)
+		if err != nil {
+			return fmt.Errorf("check file: %w", err)
+		}
+		if info.IsDir() {
+			return fmt.Errorf("%s is a directory", path)
+		}
+		files = append(files, offerFile{Name: filepath.Base(path), Size: info.Size()})
+	}
+	body, err := json.Marshal(struct {
+		Files []offerFile `json:"files"`
+	}{files})
+	if err != nil {
+		return fmt.Errorf("encode offer: %w", err)
+	}
+
+	client := sender.clientFor(fingerprint)
+	defer client.CloseIdleConnections()
+	request, err := http.NewRequestWithContext(ctx, http.MethodPost, sender.scheme()+"://"+address+"/offer", bytes.NewReader(body))
+	if err != nil {
+		return fmt.Errorf("build offer request: %w", err)
+	}
+	response, err := client.Do(request)
+	if err != nil {
+		return fmt.Errorf("offer files: %w", err)
+	}
+	defer func() { _ = response.Body.Close() }()
+
+	switch response.StatusCode {
+	case http.StatusNoContent:
+		return nil
+	case http.StatusForbidden:
+		message, _ := io.ReadAll(io.LimitReader(response.Body, 200))
+		if strings.Contains(string(message), "declined") {
+			return ErrDeclined
+		}
+		return ErrNotPaired
+	default:
+		return fmt.Errorf("offer files: %s", response.Status)
+	}
+}
+
+type offerFile struct {
+	Name string `json:"name"`
+	Size int64  `json:"size"`
 }

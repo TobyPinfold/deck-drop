@@ -7,4 +7,9 @@
 export interface Peer {
     "fingerprint": string;
     "name": string;
+
+    /**
+     * AutoAccept accepts files from this device without asking.
+     */
+    "autoAccept": boolean;
 }

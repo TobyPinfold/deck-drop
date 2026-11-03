@@ -19,6 +19,7 @@ const (
 	transfersEvent    = "transfers"
 	filesDroppedEvent = "files-dropped"
 	pairedEvent       = "paired"
+	offersEvent       = "offers"
 )
 
 func init() {
@@ -26,6 +27,7 @@ func init() {
 	application.RegisterEvent[[]app.Transfer](transfersEvent)
 	application.RegisterEvent[[]string](filesDroppedEvent)
 	application.RegisterEvent[[]trust.Peer](pairedEvent)
+	application.RegisterEvent[[]app.PendingOffer](offersEvent)
 }
 
 // service exposes the app to the frontend and ties it to the application
@@ -152,4 +154,19 @@ func (service *service) Unpair(fingerprint string) error {
 // PairedDevices lists the devices this one is paired with.
 func (service *service) PairedDevices() []trust.Peer {
 	return service.app.PairedDevices()
+}
+
+// Offers lists the files other devices are waiting to send.
+func (service *service) Offers() []app.PendingOffer {
+	return service.app.Offers()
+}
+
+// RespondToOffer accepts or declines files another device wants to send.
+func (service *service) RespondToOffer(id int, accept bool) error {
+	return service.app.RespondToOffer(id, accept)
+}
+
+// SetAutoAccept chooses whether a paired device can send without asking.
+func (service *service) SetAutoAccept(fingerprint string, enabled bool) error {
+	return service.app.SetAutoAccept(fingerprint, enabled)
 }

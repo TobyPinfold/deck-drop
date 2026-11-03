@@ -2,6 +2,7 @@ import {useEffect, useState} from 'preact/hooks';
 import {
     CancelPairing,
     PairWith,
+    SetAutoAccept,
     StartPairing,
     Unpair,
 } from '../../bindings/github.com/TobyPinfold/deck-drop/service.js';
@@ -140,6 +141,15 @@ export function Pairing({paired, selectedDevice, selectedIsPaired}) {
         }
     }
 
+    async function setAutoAccept(peer, enabled) {
+        try {
+            await SetAutoAccept(peer.fingerprint, enabled);
+            setMessage('');
+        } catch (error) {
+            setMessage(`Could not change the setting: ${errorMessage(error)}`);
+        }
+    }
+
     const canPair = selectedDevice && !selectedIsPaired;
     return html`
         <h2>Pairing</h2>
@@ -160,6 +170,11 @@ export function Pairing({paired, selectedDevice, selectedIsPaired}) {
             ${paired.map((peer) => html`
                 <li key=${peer.fingerprint}>
                     <span>${peer.name}</span>
+                    <label class="toggle">
+                        <input type="checkbox" checked=${peer.autoAccept}
+                               onChange=${(event) => setAutoAccept(peer, event.target.checked)} />
+                        Always accept
+                    </label>
                     <button class="action small" type="button" onClick=${() => unpair(peer)}>Unpair</button>
                 </li>`)}
         </ul>

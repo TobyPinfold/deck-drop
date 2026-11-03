@@ -53,10 +53,11 @@ Files are sent in chunks so interrupted transfers can resume. The server speaks 
 | -------------------------- | ------------------------------------------------------------------------------------------------------- |
 | `GET /health`              | Returns 200 when the backend is running                                                                 |
 | `POST /pair`               | Pairs a device that proves it knows the one-time code (see [Security](#security))                      |
+| `POST /offer`              | Asks the receiver to accept a list of files (`{"files":[{"name","size"}]}`). Waits for the user: 204 accepted, 403 declined |
 | `POST /upload`             | Writes the request body at a byte offset. Headers: `X-File-Name`, `X-File-Offset`. Returns 204          |
 | `GET /status?filename=...` | Returns the bytes received so far in the `X-File-Offset` header, to resume from                         |
 
-`/upload` and `/status` return 403 unless the caller presented the certificate of a paired device. Uploads over the maximum chunk size (64 MiB) are rejected with 413. Invalid file names are rejected with 400.
+`/upload` and `/status` return 403 unless the caller presented the certificate of a paired device. `/upload` and `/status` also return 428 for a file that was not offered and accepted, and an upload cannot go past the size that was offered. Uploads over the maximum chunk size (64 MiB) are rejected with 413. Invalid file names are rejected with 400.
 
 Only `/health` can be called without pairing, for example `curl -k https://localhost:8080/health` (`-k` because the certificate is self-signed).
 
@@ -71,6 +72,12 @@ Only paired devices can send files to this one. To pair, open **Pairing** on the
 Pairing is one way: pairing B with A lets B send to A. Pair the other way round to send in both directions. Each side stores the other's certificate fingerprint in `paired.json` in the config folder, and the sender pins it. **Unpair** removes a device, and it can no longer send until it pairs again.
 
 A headless device logs a one-time code at startup when run with `--pair`, for example `deckdrop --headless --pair`.
+
+### Accepting files
+
+Being paired is not enough to send: the sender first offers its files, and the receiver asks its user to **Accept** or **Decline** (B declines). Nothing is written until an offer is accepted, and only the offered files, up to their offered sizes, are accepted. An unanswered offer is declined after a minute. Resuming a paused or interrupted transfer does not ask again. Turn on **Always accept** next to a paired device to skip the prompt for it.
+
+A headless device has nobody to ask, so it declines every offer unless run with `--accept`, which accepts anything from paired devices.
 
 ### Trust model and limits
 

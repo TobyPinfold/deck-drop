@@ -19,6 +19,11 @@ export const Devices = "devices";
 export const FilesDropped = "files-dropped";
 
 /**
+ * Name of the custom event "offers".
+ */
+export const Offers = "offers";
+
+/**
  * Name of the custom event "paired".
  */
 export const Paired = "paired";

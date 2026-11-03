@@ -19,7 +19,13 @@ export function transferPercent(transfer) {
 }
 
 export function transferStatusText(transfer) {
-    return transfer.status === 'failed' ? `Failed: ${transfer.error}` : transfer.status;
+    if (transfer.status === 'failed') {
+        return `Failed: ${transfer.error}`;
+    }
+    if (transfer.status === 'waiting') {
+        return 'Waiting for the other device to accept';
+    }
+    return transfer.status;
 }
 
 export function transferDetailText(transfer) {
@@ -43,4 +49,10 @@ export function appendDigit(code, digit, maxLength) {
 // Whole seconds until expiresAt (an ISO time string), never below zero.
 export function secondsLeft(expiresAt, nowMs) {
     return Math.max(0, Math.ceil((new Date(expiresAt).getTime() - nowMs) / 1000));
+}
+
+// "3 files (4.2 MB)" or, for one file, its name.
+export function offerSummary(offer) {
+    const size = formatBytes(offer.bytes);
+    return offer.count === 1 ? `${offer.names[0]} (${size})` : `${offer.count} files (${size})`;
 }

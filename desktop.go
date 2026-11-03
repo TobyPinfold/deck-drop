@@ -37,6 +37,9 @@ func runDesktop(logger *slog.Logger, config backend.Config, settingsStore app.Se
 		OnPairedChanged: func(peers []trust.Peer) {
 			desktop.Event.Emit(pairedEvent, peers)
 		},
+		OnOffersChanged: func(offers []app.PendingOffer) {
+			desktop.Event.Emit(offersEvent, offers)
+		},
 		OnTransfersChanged: func(transfers []app.Transfer) {
 			desktop.Event.Emit(transfersEvent, transfers)
 		},

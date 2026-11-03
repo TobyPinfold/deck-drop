@@ -21,6 +21,9 @@ const (
 type Peer struct {
 	Fingerprint string `json:"fingerprint"`
 	Name        string `json:"name"`
+
+	// AutoAccept accepts files from this device without asking.
+	AutoAccept bool `json:"autoAccept"`
 }
 
 // Store is the set of paired devices, saved to a JSON file.
@@ -79,6 +82,30 @@ func (store *Store) Has(fingerprint string) bool {
 	return slices.ContainsFunc(store.peers, func(peer Peer) bool { return peer.Fingerprint == fingerprint })
 }
 
+// Get returns the paired device with fingerprint.
+func (store *Store) Get(fingerprint string) (Peer, bool) {
+	store.mu.Lock()
+	defer store.mu.Unlock()
+	index := slices.IndexFunc(store.peers, func(peer Peer) bool { return peer.Fingerprint == fingerprint })
+	if fingerprint == "" || index < 0 {
+		return Peer{}, false
+	}
+	return store.peers[index], true
+}
+
+// SetAutoAccept sets whether files from a paired device are accepted without
+// asking. Unknown devices are ignored.
+func (store *Store) SetAutoAccept(fingerprint string, autoAccept bool) error {
+	return store.change(func(peers []Peer) []Peer {
+		for index := range peers {
+			if peers[index].Fingerprint == fingerprint {
+				peers[index].AutoAccept = autoAccept
+			}
+		}
+		return peers
+	})
+}
+
 // List returns the paired devices.
 func (store *Store) List() []Peer {
 	store.mu.Lock()
@@ -89,7 +116,13 @@ func (store *Store) List() []Peer {
 // Add pairs a device, replacing any earlier entry with the same fingerprint.
 func (store *Store) Add(peer Peer) error {
 	return store.change(func(peers []Peer) []Peer {
-		peers = slices.DeleteFunc(peers, func(existing Peer) bool { return existing.Fingerprint == peer.Fingerprint })
+		peers = slices.DeleteFunc(peers, func(existing Peer) bool {
+			if existing.Fingerprint != peer.Fingerprint {
+				return false
+			}
+			peer.AutoAccept = existing.AutoAccept
+			return true
+		})
 		return append(peers, peer)
 	})
 }

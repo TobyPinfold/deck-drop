@@ -11,6 +11,18 @@ export interface Info {
 }
 
 /**
+ * PendingOffer is a paired device asking to send files, waiting for the user
+ * to accept or decline.
+ */
+export interface PendingOffer {
+    "id": number;
+    "device": string;
+    "count": number;
+    "bytes": number;
+    "names": string[] | null;
+}
+
+/**
  * ReceivedFile is a file in the receive directory.
  */
 export interface ReceivedFile {

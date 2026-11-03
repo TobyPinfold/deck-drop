@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/TobyPinfold/deck-drop/internal/backend/httpapi"
+	"github.com/TobyPinfold/deck-drop/internal/offer"
 	"github.com/TobyPinfold/deck-drop/internal/transfer"
 )
 
@@ -196,9 +197,14 @@ func (backend *Backend) access() *httpapi.Access {
 	if backend.config.Trust == nil || backend.config.Pairing == nil {
 		return nil
 	}
-	return &httpapi.Access{
+	access := &httpapi.Access{
 		Paired:     backend.config.Trust,
 		Pairer:     backend.config.Pairing,
 		DeviceName: backend.config.DeviceName,
 	}
+	if backend.config.Offers != nil {
+		access.Offers = backend.config.Offers
+		access.Grants = offer.NewGrants()
+	}
+	return access
 }
