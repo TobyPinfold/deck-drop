@@ -7,12 +7,17 @@ import type { Events } from "@wailsio/runtime";
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
+import type * as app$0 from "../../../../TobyPinfold/deck-drop/internal/app/models.js";
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore: Unused imports
 import type * as discovery$0 from "../../../../TobyPinfold/deck-drop/internal/discovery/models.js";
 
 declare module "@wailsio/runtime" {
     namespace Events {
         interface CustomEvents {
             "devices": discovery$0.Device[] | null;
+            "files-dropped": string[] | null;
+            "transfers": app$0.Transfer[] | null;
         }
     }
 }

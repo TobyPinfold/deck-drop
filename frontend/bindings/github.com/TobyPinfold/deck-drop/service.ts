@@ -19,6 +19,14 @@ import * as app$0 from "./internal/app/models.js";
 import * as discovery$0 from "./internal/discovery/models.js";
 
 /**
+ * ChooseFiles asks the user to pick files and returns their paths. It returns
+ * nothing if the user cancels.
+ */
+export function ChooseFiles(): $CancellablePromise<string[] | null> {
+    return $Call.ByID(455073519);
+}
+
+/**
  * Devices lists the other DeckDrop devices currently on the network.
  */
 export function Devices(): $CancellablePromise<discovery$0.Device[] | null> {
@@ -30,4 +38,18 @@ export function Devices(): $CancellablePromise<discovery$0.Device[] | null> {
  */
 export function Info(): $CancellablePromise<app$0.Info> {
     return $Call.ByID(1227241781);
+}
+
+/**
+ * SendFiles queues the files at paths to be sent to the named device.
+ */
+export function SendFiles(deviceName: string, paths: string[] | null): $CancellablePromise<void> {
+    return $Call.ByID(2706696230, deviceName, paths);
+}
+
+/**
+ * Transfers lists every file queued for sending so far.
+ */
+export function Transfers(): $CancellablePromise<app$0.Transfer[] | null> {
+    return $Call.ByID(1920889439);
 }

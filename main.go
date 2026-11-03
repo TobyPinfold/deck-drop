@@ -8,17 +8,21 @@ import (
 	"time"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
+	"github.com/wailsapp/wails/v3/pkg/events"
 
 	"github.com/TobyPinfold/deck-drop/internal/app"
 	"github.com/TobyPinfold/deck-drop/internal/backend"
 	"github.com/TobyPinfold/deck-drop/internal/discovery"
+	"github.com/TobyPinfold/deck-drop/internal/transfer"
 )
 
 const (
 	scanDuration = 3 * time.Second
 	scanInterval = 2 * time.Second
 
-	devicesEvent = "devices"
+	devicesEvent      = "devices"
+	transfersEvent    = "transfers"
+	filesDroppedEvent = "files-dropped"
 )
 
 //go:embed all:frontend/dist
@@ -27,12 +31,15 @@ var assets embed.FS
 func init() {
 	// Registering the event type gives the frontend typed bindings for it.
 	application.RegisterEvent[[]discovery.Device](devicesEvent)
+	application.RegisterEvent[[]app.Transfer](transfersEvent)
+	application.RegisterEvent[[]string](filesDroppedEvent)
 }
 
 // service exposes the app to the frontend and ties it to the application
 // lifecycle. Only its exported methods are callable from the frontend.
 type service struct {
-	app *app.App
+	app     *app.App
+	desktop *application.App
 }
 
 func (service *service) ServiceStartup(ctx context.Context, _ application.ServiceOptions) error {
@@ -48,6 +55,24 @@ func (service *service) ServiceShutdown() error {
 // Devices lists the other DeckDrop devices currently on the network.
 func (service *service) Devices() []discovery.Device {
 	return service.app.Devices()
+}
+
+// Transfers lists every file queued for sending so far.
+func (service *service) Transfers() []app.Transfer {
+	return service.app.Transfers()
+}
+
+// SendFiles queues the files at paths to be sent to the named device.
+func (service *service) SendFiles(deviceName string, paths []string) error {
+	return service.app.SendFiles(deviceName, paths)
+}
+
+// ChooseFiles asks the user to pick files and returns their paths. It returns
+// nothing if the user cancels.
+func (service *service) ChooseFiles() ([]string, error) {
+	return service.desktop.Dialog.OpenFile().
+		SetTitle("Choose files to send").
+		PromptForMultipleSelection()
 }
 
 // Info reports whether the backend is running and where.
@@ -71,24 +96,38 @@ func main() {
 		OnDevicesChanged: func(devices []discovery.Device) {
 			desktop.Event.Emit(devicesEvent, devices)
 		},
+		Sender: transfer.Sender{},
+		OnTransfersChanged: func(transfers []app.Transfer) {
+			desktop.Event.Emit(transfersEvent, transfers)
+		},
 	})
+	deckDropService := &service{app: deckDrop}
 
 	desktop = application.New(application.Options{
 		Name:        "DeckDrop",
 		Description: "Steam Deck first local network file sharing",
-		Services:    []application.Service{application.NewService(&service{app: deckDrop})},
+		Services:    []application.Service{application.NewService(deckDropService)},
 		Assets:      application.AssetOptions{Handler: application.AssetFileServerFS(assets)},
 		Mac: application.MacOptions{
 			ApplicationShouldTerminateAfterLastWindowClosed: true,
 		},
 	})
 
-	desktop.Window.NewWithOptions(application.WebviewWindowOptions{
+	deckDropService.desktop = desktop
+
+	window := desktop.Window.NewWithOptions(application.WebviewWindowOptions{
 		Title:            "DeckDrop",
 		Width:            1280,
 		Height:           800,
 		BackgroundColour: application.NewRGB(27, 38, 54),
 		URL:              "/",
+		EnableFileDrop:   true,
+	})
+
+	// The frontend knows which device is selected, so it decides where
+	// dropped files go.
+	window.OnWindowEvent(events.Common.WindowFilesDropped, func(event *application.WindowEvent) {
+		desktop.Event.Emit(filesDroppedEvent, event.Context().DroppedFiles())
 	})
 
 	if err := desktop.Run(); err != nil {
