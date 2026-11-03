@@ -1,4 +1,5 @@
 import './style.css';
+import {startNavigation} from './input.js';
 import {Events} from '@wailsio/runtime';
 import {
     ChooseFiles, Devices, Info, OpenReceiveFolder, PauseTransfer, ReceiveDir, ReceivedFiles, ResumeTransfer, SendFiles, Transfers,
@@ -10,6 +11,7 @@ const emptyMessage = document.querySelector('#empty');
 const chooseButton = document.querySelector('#choose');
 const hint = document.querySelector('#hint');
 const transferList = document.querySelector('#transfers');
+const transfersSection = document.querySelector('#transfers-section');
 const openFolderButton = document.querySelector('#open-folder');
 const receiveDirLabel = document.querySelector('#receive-dir');
 const receivedList = document.querySelector('#received');
@@ -18,8 +20,24 @@ const receivedEmpty = document.querySelector('#received-empty');
 const receivedRefreshMs = 2000;
 
 let selectedName = null;
+let knownDevices = [];
+
+// Tiles are rebuilt on every update, so remember which one had focus.
+function focusedDeviceName() {
+    return document.activeElement?.dataset?.device ?? null;
+}
+
+function focusDeviceTile(name) {
+    const tiles = [...deviceList.querySelectorAll('.tile')];
+    const tile = tiles.find((candidate) => candidate.dataset.device === name) ?? null;
+    tile?.focus();
+    return tile !== null;
+}
 
 function renderDevices(devices) {
+    knownDevices = devices;
+    const focusedName = focusedDeviceName();
+    const nothingFocused = document.activeElement === document.body;
     if (!devices.some((device) => device.name === selectedName)) {
         selectedName = null;
     }
@@ -28,11 +46,11 @@ function renderDevices(devices) {
         const tile = document.createElement('button');
         tile.className = 'tile';
         tile.type = 'button';
+        tile.dataset.device = device.name;
         tile.setAttribute('aria-pressed', String(device.name === selectedName));
         tile.addEventListener('click', () => {
             selectedName = device.name;
-            renderDevices(devices);
-            deviceList.querySelector('[aria-pressed="true"]').focus();
+            renderDevices(knownDevices);
         });
 
         // Device names come from the network, so only ever set them as text.
@@ -50,6 +68,12 @@ function renderDevices(devices) {
     }));
     emptyMessage.hidden = devices.length > 0;
     chooseButton.disabled = selectedName === null;
+
+    if (focusedName !== null) {
+        focusDeviceTile(focusedName);
+    } else if (nothingFocused) {
+        deviceList.querySelector('.tile')?.focus();
+    }
 }
 
 const transferRows = new Map();
@@ -122,6 +146,7 @@ function updateTransferRow(row, transfer) {
 }
 
 function renderTransfers(transfers) {
+    transfersSection.hidden = transfers.length === 0;
     for (const transfer of transfers) {
         let row = transferRows.get(transfer.id);
         if (!row) {
@@ -205,3 +230,13 @@ ReceiveDir().then((directory) => {
 });
 refreshReceived();
 setInterval(refreshReceived, receivedRefreshMs);
+
+// B goes back to the device list, which is where every send starts.
+startNavigation({
+    onBack: () => {
+        if (!focusDeviceTile(selectedName)) {
+            deviceList.querySelector('.tile')?.focus();
+        }
+        document.querySelector('.column').scrollTo({top: 0});
+    },
+});

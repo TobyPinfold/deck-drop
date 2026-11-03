@@ -7,8 +7,12 @@
 }
 
 body {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    box-sizing: border-box;
     margin: 0;
-    padding: 32px 48px;
+    padding: 24px 32px 0;
     background: var(--background);
     color: var(--text);
     font-family: system-ui, sans-serif;
@@ -20,7 +24,7 @@ h1 {
 }
 
 h2 {
-    margin: 40px 0 20px;
+    margin: 28px 0 16px;
     font-size: 20px;
     font-weight: 500;
     color: var(--muted);
@@ -58,7 +62,7 @@ h2 {
     cursor: pointer;
 }
 
-.tile:focus-visible {
+.tile:focus {
     outline: none;
     border-color: #fff;
     transform: scale(1.03);
@@ -87,7 +91,7 @@ h2 {
     font-size: 18px;
 }
 
-.send {
+.panel {
     display: flex;
     align-items: center;
     gap: 24px;
@@ -108,7 +112,7 @@ h2 {
     cursor: pointer;
 }
 
-.action:focus-visible {
+.action:focus {
     outline: none;
     border-color: #fff;
     transform: scale(1.03);
@@ -213,4 +217,33 @@ h2 {
     border-radius: 10px;
     background: var(--tile);
     font-size: 18px;
+}
+
+header {
+    flex: none;
+}
+
+/* Two scrolling columns so the whole app fits a 1280x800 screen. The padding
+   leaves room for the focus ring and its scale-up. */
+.columns {
+    display: grid;
+    flex: 1;
+    grid-template-columns: 1fr 1fr;
+    gap: 32px;
+    min-height: 0;
+}
+
+.column {
+    min-height: 0;
+    padding: 0 8px 24px;
+    overflow-y: auto;
+}
+
+.column > :first-child h2,
+.column > h2:first-child {
+    margin-top: 12px;
+}
+
+.action {
+    min-height: 56px;
 }
