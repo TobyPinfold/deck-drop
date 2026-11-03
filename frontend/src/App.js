@@ -1,7 +1,8 @@
 import {useEffect, useState} from 'preact/hooks';
 import {Events} from '@wailsio/runtime';
-import {Devices as ListDevices, Info, Transfers as ListTransfers} from '../bindings/github.com/TobyPinfold/deck-drop/service.js';
+import {Devices as ListDevices, Info, PairedDevices, Transfers as ListTransfers} from '../bindings/github.com/TobyPinfold/deck-drop/service.js';
 import {Devices} from './components/Devices.js';
+import {Pairing} from './components/Pairing.js';
 import {Received} from './components/Received.js';
 import {Send} from './components/Send.js';
 import {Settings} from './components/Settings.js';
@@ -32,13 +33,17 @@ function useStatus(settingsVersion) {
 export function App() {
     const devices = useBackendList('devices', ListDevices);
     const transfers = useBackendList('transfers', ListTransfers);
+    const paired = useBackendList('paired', PairedDevices);
     const [requestedName, setRequestedName] = useState(null);
     const [hint, setHint] = useState('Select a device, then choose or drop files to send.');
     const [settingsVersion, setSettingsVersion] = useState(0);
     const status = useStatus(settingsVersion);
 
     // A device that disappears is no longer selected.
-    const selectedName = devices.some((device) => device.name === requestedName) ? requestedName : null;
+    const selectedDevice = devices.find((device) => device.name === requestedName) ?? null;
+    const selectedName = selectedDevice?.name ?? null;
+    const pairedFingerprints = new Set(paired.map((peer) => peer.fingerprint));
+    const selectedIsPaired = selectedDevice !== null && pairedFingerprints.has(selectedDevice.fingerprint);
 
     // B goes back to the device list, which is where every send starts.
     useEffect(() => {
@@ -59,8 +64,9 @@ export function App() {
         </header>
         <main class="columns">
             <div class="column">
-                <${Devices} devices=${devices} selectedName=${selectedName} onSelect=${setRequestedName} />
-                <${Send} selectedName=${selectedName} hint=${hint} setHint=${setHint} />
+                <${Devices} devices=${devices} pairedFingerprints=${pairedFingerprints} selectedName=${selectedName} onSelect=${setRequestedName} />
+                <${Send} selectedName=${selectedName} canSend=${selectedIsPaired} hint=${hint} setHint=${setHint} />
+                <${Pairing} paired=${paired} selectedDevice=${selectedDevice} selectedIsPaired=${selectedIsPaired} />
             </div>
             <div class="column">
                 <${Transfers} transfers=${transfers} setHint=${setHint} />

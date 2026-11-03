@@ -12,6 +12,7 @@ import (
 	"github.com/TobyPinfold/deck-drop/internal/backend"
 	"github.com/TobyPinfold/deck-drop/internal/discovery"
 	"github.com/TobyPinfold/deck-drop/internal/settings"
+	"github.com/TobyPinfold/deck-drop/internal/trust"
 )
 
 // App ties the backend's lifetime to the desktop window's lifetime.
@@ -72,6 +73,9 @@ type Options struct {
 	// only files received during this run are listed.
 	HistoryStore HistoryStore
 
+	// OnPairedChanged is called when a device is paired or unpaired.
+	OnPairedChanged func([]trust.Peer)
+
 	// Now returns the current time. It defaults to time.Now.
 	Now func() time.Time
 }
@@ -114,6 +118,9 @@ func New(logger *slog.Logger, config backend.Config, options Options) *App {
 		app.received = names
 	}
 	config.Receipts = app
+	if config.Trust != nil && options.OnPairedChanged != nil {
+		config.Trust.OnChange(options.OnPairedChanged)
+	}
 	app.config = config
 	app.backend = backend.New(logger, config)
 	return app

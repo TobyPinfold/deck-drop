@@ -16,24 +16,22 @@ import (
 
 const defaultChunkSize = 8 << 20
 
-// PinSource looks up the pinned certificate fingerprint of the device at
-// address ("host:port"). It returns an empty string for an unknown device.
-type PinSource interface {
-	Fingerprint(address string) string
-}
+// ErrNotPaired means the device refused the upload because this device has
+// not been paired with it.
+var ErrNotPaired = errors.New("this device is not paired with the receiver")
 
 // Sender uploads files to another DeckDrop device in chunks.
 type Sender struct {
-	// Client performs the requests. It overrides Secure and Pins.
+	// Client performs the requests. It overrides Secure.
 	Client *http.Client
 
 	// Secure connects over HTTPS. Without it (and without Client) the sender
 	// uses plain HTTP, which is only meant for tests.
 	Secure bool
 
-	// Pins says which certificate fingerprint a device must present. Nil, or
-	// an empty fingerprint, accepts any certificate.
-	Pins PinSource
+	// Identity is the client certificate presented to devices, so they can
+	// tell who is sending.
+	Identity *identity.Identity
 
 	// ChunkSize is the largest number of bytes sent per request. It must not
 	// exceed the receiver's chunk limit. It defaults to 8 MiB.
@@ -41,13 +39,14 @@ type Sender struct {
 }
 
 // Send uploads the file at path to the device listening on address
-// ("host:port"). If the device already has part of the file, the upload
+// ("host:port"). With Secure, the device must present the certificate with
+// fingerprint; an empty fingerprint accepts any certificate. If the device already has part of the file, the upload
 // resumes where it left off. Cancelling ctx stops the upload; sending the same
 // file again continues from what the device received.
 //
 // progress, if not nil, is called with the bytes the device has and the file's
 // total size: first with the resume offset, then as data is sent.
-func (sender Sender) Send(ctx context.Context, address, path string, progress func(sent, total int64)) error {
+func (sender Sender) Send(ctx context.Context, address, fingerprint, path string, progress func(sent, total int64)) error {
 	file, err := os.Open(path)
 	if err != nil {
 		return fmt.Errorf("open file: %w", err)
@@ -65,7 +64,7 @@ func (sender Sender) Send(ctx context.Context, address, path string, progress fu
 	name := filepath.Base(path)
 	size := info.Size()
 	baseURL := sender.scheme() + "://" + address
-	client := sender.clientFor(address)
+	client := sender.clientFor(fingerprint)
 	defer client.CloseIdleConnections()
 
 	offset, err := sender.receivedSize(ctx, client, baseURL, name)
@@ -116,6 +115,9 @@ func (sender Sender) receivedSize(ctx context.Context, client *http.Client, base
 	}
 	defer func() { _ = response.Body.Close() }()
 
+	if response.StatusCode == http.StatusForbidden {
+		return 0, ErrNotPaired
+	}
 	if response.StatusCode != http.StatusOK {
 		return 0, fmt.Errorf("check progress of %q: %s", name, response.Status)
 	}
@@ -144,6 +146,9 @@ func (sender Sender) uploadChunk(ctx context.Context, client *http.Client, baseU
 	}
 	defer func() { _ = response.Body.Close() }()
 
+	if response.StatusCode == http.StatusForbidden {
+		return ErrNotPaired
+	}
 	if response.StatusCode != http.StatusNoContent {
 		return fmt.Errorf("upload %q at %d: %s", name, offset, response.Status)
 	}
@@ -157,18 +162,14 @@ func (sender Sender) scheme() string {
 	return "http"
 }
 
-func (sender Sender) clientFor(address string) *http.Client {
+func (sender Sender) clientFor(fingerprint string) *http.Client {
 	if sender.Client != nil {
 		return sender.Client
 	}
 	if !sender.Secure {
 		return http.DefaultClient
 	}
-	pin := ""
-	if sender.Pins != nil {
-		pin = sender.Pins.Fingerprint(address)
-	}
-	return &http.Client{Transport: &http.Transport{TLSClientConfig: identity.ClientConfig(pin)}}
+	return &http.Client{Transport: &http.Transport{TLSClientConfig: identity.ClientConfig(fingerprint, sender.Identity)}}
 }
 
 // progressReader reports how much of the file has been read as it is uploaded.

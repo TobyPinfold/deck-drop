@@ -11,7 +11,7 @@ import (
 	"github.com/TobyPinfold/deck-drop/internal/backend"
 	backendconfig "github.com/TobyPinfold/deck-drop/internal/backend/config"
 	"github.com/TobyPinfold/deck-drop/internal/discovery"
-	"github.com/TobyPinfold/deck-drop/internal/identity"
+	"github.com/TobyPinfold/deck-drop/internal/security"
 )
 
 const usageExitCode = 2
@@ -29,12 +29,9 @@ func main() {
 	}
 	config.Announcer = discovery.MDNS{}
 
-	identityDir, err := identity.DefaultDir()
-	if err == nil {
-		config.Identity, err = identity.LoadOrCreate(identityDir)
-	}
+	config, err = security.Setup(config)
 	if err != nil {
-		logger.Error("cannot create the device certificate", "error", err)
+		logger.Error("cannot set up device security", "error", err)
 		os.Exit(1)
 	}
 	logger.Info("device identity ready", "fingerprint", config.Identity.Fingerprint())

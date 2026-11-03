@@ -62,7 +62,7 @@ func TestSenderSendsFileInChunks(t *testing.T) {
 	path := writeSourceFile(t, "save.bin", content)
 
 	sender := Sender{ChunkSize: 1024}
-	if err := sender.Send(context.Background(), server.Listener.Addr().String(), path, nil); err != nil {
+	if err := sender.Send(context.Background(), server.Listener.Addr().String(), "", path, nil); err != nil {
 		t.Fatalf("Send: %v", err)
 	}
 
@@ -79,7 +79,7 @@ func TestSenderSendsEmptyFile(t *testing.T) {
 	server, directory := newTestServer(t)
 	path := writeSourceFile(t, "empty.txt", nil)
 
-	if err := (Sender{}).Send(context.Background(), server.Listener.Addr().String(), path, nil); err != nil {
+	if err := (Sender{}).Send(context.Background(), server.Listener.Addr().String(), "", path, nil); err != nil {
 		t.Fatalf("Send: %v", err)
 	}
 
@@ -106,7 +106,7 @@ func TestSenderResumesFromReceivedOffset(t *testing.T) {
 	defer recording.Close()
 
 	sender := Sender{ChunkSize: 1500}
-	if err := sender.Send(context.Background(), recording.Listener.Addr().String(), path, nil); err != nil {
+	if err := sender.Send(context.Background(), recording.Listener.Addr().String(), "", path, nil); err != nil {
 		t.Fatalf("Send: %v", err)
 	}
 
@@ -129,7 +129,7 @@ func TestSenderReportsServerRejection(t *testing.T) {
 	defer server.Close()
 	path := writeSourceFile(t, "file.txt", []byte("data"))
 
-	if err := (Sender{}).Send(context.Background(), server.Listener.Addr().String(), path, nil); err == nil {
+	if err := (Sender{}).Send(context.Background(), server.Listener.Addr().String(), "", path, nil); err == nil {
 		t.Fatal("Send succeeded against a failing server")
 	}
 }
@@ -140,7 +140,7 @@ func TestSenderStopsWhenContextCancelled(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 
-	err := (Sender{}).Send(ctx, server.Listener.Addr().String(), path, nil)
+	err := (Sender{}).Send(ctx, server.Listener.Addr().String(), "", path, nil)
 
 	if !errors.Is(err, context.Canceled) {
 		t.Errorf("Send error = %v, want context.Canceled", err)
@@ -158,7 +158,7 @@ func TestSenderReportsProgress(t *testing.T) {
 	type report struct{ sent, total int64 }
 	var reports []report
 	sender := Sender{ChunkSize: 1000}
-	err := sender.Send(context.Background(), server.Listener.Addr().String(), path, func(sent, total int64) {
+	err := sender.Send(context.Background(), server.Listener.Addr().String(), "", path, func(sent, total int64) {
 		reports = append(reports, report{sent, total})
 	})
 	if err != nil {

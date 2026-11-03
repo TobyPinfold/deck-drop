@@ -52,28 +52,32 @@ Files are sent in chunks so interrupted transfers can resume. The server speaks 
 | Endpoint                   | Description                                                                                             |
 | -------------------------- | ------------------------------------------------------------------------------------------------------- |
 | `GET /health`              | Returns 200 when the backend is running                                                                 |
+| `POST /pair`               | Pairs a device that proves it knows the one-time code (see [Security](#security))                      |
 | `POST /upload`             | Writes the request body at a byte offset. Headers: `X-File-Name`, `X-File-Offset`. Returns 204          |
 | `GET /status?filename=...` | Returns the bytes received so far in the `X-File-Offset` header, to resume from                         |
 
-Uploads over the maximum chunk size (64 MiB) are rejected with 413. Invalid file names are rejected with 400.
+`/upload` and `/status` return 403 unless the caller presented the certificate of a paired device. Uploads over the maximum chunk size (64 MiB) are rejected with 413. Invalid file names are rejected with 400.
 
-```sh
-curl -k -X POST --data-binary @photo.jpg \
-  -H 'X-File-Name: photo.jpg' -H 'X-File-Offset: 0' \
-  https://localhost:8080/upload
-curl -ki 'https://localhost:8080/status?filename=photo.jpg'
-```
-
-`-k` is needed because the certificate is self-signed.
+Only `/health` can be called without pairing, for example `curl -k https://localhost:8080/health` (`-k` because the certificate is self-signed).
 
 ## Security
 
 Each device creates a self-signed certificate the first time it runs (`identity.crt` and `identity.key` in the config folder; the key is readable only by you). Its SHA-256 fingerprint identifies the device and is advertised in the mDNS `fp=` record. All transfers are encrypted with TLS 1.3.
 
-Trust model and limits:
+### Pairing
+
+Only paired devices can send files to this one. To pair, open **Pairing** on the receiving device and choose **Show pairing code**. On the other device, select the receiver, choose **Pair with ...** and enter the six digit code (the on-screen keypad works with the D-pad and A). The code expires after two minutes, works once, and is discarded after five wrong attempts. The code is never sent: the other device sends an HMAC of both certificate fingerprints keyed with the code, so someone watching the network, or sitting in the middle with their own certificate, cannot reuse it.
+
+Pairing is one way: pairing B with A lets B send to A. Pair the other way round to send in both directions. Each side stores the other's certificate fingerprint in `paired.json` in the config folder, and the sender pins it. **Unpair** removes a device, and it can no longer send until it pairs again.
+
+A headless device logs a one-time code at startup when run with `--pair`, for example `deckdrop --headless --pair`.
+
+### Trust model and limits
 
 - There is no certificate authority. A sender checks that a device's certificate matches the fingerprint it has pinned for it.
-- Until a device is paired and pinned, connections are encrypted but the other device is not authenticated, so an active attacker on the network could impersonate it. The advertised fingerprint is not trusted for this, because anyone can announce anything over mDNS.
+- Connections to a paired device are authenticated: the sender refuses a certificate that is not the pinned one. The fingerprint advertised over mDNS is only a hint for finding the pin; anyone can announce anything, but cannot present the paired device's certificate.
+- Pairing is only as strong as the code: an attacker has five guesses at a one in a million code per pairing attempt, and the person pairing should check the code appears on the device they expect.
+- Devices are still visible to everyone on the network; see issue #43.
 - Deleting the identity files gives the device a new identity, which devices that pinned the old one will reject.
 
 ## Configuration

@@ -11,10 +11,6 @@ import (
 	"github.com/TobyPinfold/deck-drop/internal/identity"
 )
 
-type fixedPin string
-
-func (pin fixedPin) Fingerprint(string) string { return string(pin) }
-
 // newTLSServer serves the upload protocol over TLS using a fresh identity.
 func newTLSServer(t *testing.T) (address, directory, fingerprint string) {
 	t.Helper()
@@ -36,8 +32,8 @@ func TestSenderSendsOverTLSToPinnedDevice(t *testing.T) {
 	address, directory, fingerprint := newTLSServer(t)
 	path := writeSourceFile(t, "hello.txt", []byte("hello over tls"))
 
-	sender := Sender{Secure: true, Pins: fixedPin(fingerprint)}
-	if err := sender.Send(context.Background(), address, path, nil); err != nil {
+	sender := Sender{Secure: true}
+	if err := sender.Send(context.Background(), address, fingerprint, path, nil); err != nil {
 		t.Fatalf("Send() error = %v", err)
 	}
 
@@ -55,8 +51,8 @@ func TestSenderRejectsDeviceWithADifferentCertificate(t *testing.T) {
 	}
 	path := writeSourceFile(t, "secret.txt", []byte("secret"))
 
-	sender := Sender{Secure: true, Pins: fixedPin(other.Fingerprint())}
-	err = sender.Send(context.Background(), address, path, nil)
+	sender := Sender{Secure: true}
+	err = sender.Send(context.Background(), address, other.Fingerprint(), path, nil)
 
 	if !errors.Is(err, identity.ErrFingerprintMismatch) {
 		t.Fatalf("Send() error = %v, want a fingerprint mismatch", err)
@@ -71,7 +67,7 @@ func TestSecureSenderCannotUsePlainHTTPDevice(t *testing.T) {
 	path := writeSourceFile(t, "plain.txt", []byte("x"))
 
 	sender := Sender{Secure: true}
-	if err := sender.Send(context.Background(), server.Listener.Addr().String(), path, nil); err == nil {
+	if err := sender.Send(context.Background(), server.Listener.Addr().String(), "", path, nil); err == nil {
 		t.Error("Send() error = nil, want failure against a plain HTTP device")
 	}
 }

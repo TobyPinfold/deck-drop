@@ -19,7 +19,20 @@ import * as app$0 from "./internal/app/models.js";
 import * as discovery$0 from "./internal/discovery/models.js";
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
+import * as pairing$0 from "./internal/pairing/models.js";
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore: Unused imports
 import * as settings$0 from "./internal/settings/models.js";
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore: Unused imports
+import * as trust$0 from "./internal/trust/models.js";
+
+/**
+ * CancelPairing discards the pairing code.
+ */
+export function CancelPairing(): $CancellablePromise<void> {
+    return $Call.ByID(3537840381);
+}
 
 /**
  * ChooseFiles asks the user to pick files and returns their paths. It returns
@@ -56,6 +69,20 @@ export function Info(): $CancellablePromise<app$0.Info> {
  */
 export function OpenReceiveFolder(): $CancellablePromise<void> {
     return $Call.ByID(1532415790);
+}
+
+/**
+ * PairWith pairs with the named device using the code it is showing.
+ */
+export function PairWith(deviceName: string, code: string): $CancellablePromise<void> {
+    return $Call.ByID(291412245, deviceName, code);
+}
+
+/**
+ * PairedDevices lists the devices this one is paired with.
+ */
+export function PairedDevices(): $CancellablePromise<trust$0.Peer[] | null> {
+    return $Call.ByID(3079847155);
 }
 
 /**
@@ -109,8 +136,23 @@ export function Settings(): $CancellablePromise<settings$0.Settings> {
 }
 
 /**
+ * StartPairing shows a one-time code another device enters to pair with this
+ * one.
+ */
+export function StartPairing(): $CancellablePromise<pairing$0.Code> {
+    return $Call.ByID(2275459097);
+}
+
+/**
  * Transfers lists every file queued for sending so far.
  */
 export function Transfers(): $CancellablePromise<app$0.Transfer[] | null> {
     return $Call.ByID(1920889439);
+}
+
+/**
+ * Unpair revokes the pairing with the device that has fingerprint.
+ */
+export function Unpair(fingerprint: string): $CancellablePromise<void> {
+    return $Call.ByID(3079733290, fingerprint);
 }

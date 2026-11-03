@@ -13,6 +13,7 @@ import (
 	"github.com/TobyPinfold/deck-drop/internal/discovery"
 	"github.com/TobyPinfold/deck-drop/internal/history"
 	"github.com/TobyPinfold/deck-drop/internal/transfer"
+	"github.com/TobyPinfold/deck-drop/internal/trust"
 )
 
 const (
@@ -31,8 +32,11 @@ func runDesktop(logger *slog.Logger, config backend.Config, settingsStore app.Se
 		},
 		SettingsStore:    settingsStore,
 		HistoryStore:     openHistoryStore(),
-		Sender:           transfer.Sender{Secure: true},
+		Sender:           transfer.Sender{Secure: true, Identity: config.Identity},
 		ProgressInterval: progressInterval,
+		OnPairedChanged: func(peers []trust.Peer) {
+			desktop.Event.Emit(pairedEvent, peers)
+		},
 		OnTransfersChanged: func(transfers []app.Transfer) {
 			desktop.Event.Emit(transfersEvent, transfers)
 		},

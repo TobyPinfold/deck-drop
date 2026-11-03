@@ -12,7 +12,7 @@ import (
 	"github.com/TobyPinfold/deck-drop/internal/backend"
 	backendconfig "github.com/TobyPinfold/deck-drop/internal/backend/config"
 	"github.com/TobyPinfold/deck-drop/internal/discovery"
-	"github.com/TobyPinfold/deck-drop/internal/identity"
+	"github.com/TobyPinfold/deck-drop/internal/security"
 	"github.com/TobyPinfold/deck-drop/internal/settings"
 )
 
@@ -46,13 +46,12 @@ func run() {
 	}
 	config.Announcer = discovery.MDNS{}
 
-	deviceIdentity, err := loadIdentity()
+	config, err = security.Setup(config)
 	if err != nil {
-		logger.Error("cannot create the device certificate", "error", err)
+		logger.Error("cannot set up device security", "error", err)
 		os.Exit(1)
 	}
-	config.Identity = deviceIdentity
-	logger.Info("device identity ready", "fingerprint", deviceIdentity.Fingerprint())
+	logger.Info("device identity ready", "fingerprint", config.Identity.Fingerprint())
 
 	if config.Headless {
 		ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
@@ -65,14 +64,6 @@ func run() {
 	}
 
 	runDesktop(logger, config, settingsStore)
-}
-
-func loadIdentity() (*identity.Identity, error) {
-	dir, err := identity.DefaultDir()
-	if err != nil {
-		return nil, err
-	}
-	return identity.LoadOrCreate(dir)
 }
 
 func openSettingsStore() (settings.Store, error) {

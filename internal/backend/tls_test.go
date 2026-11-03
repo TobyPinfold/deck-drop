@@ -29,7 +29,7 @@ func startTLSBackend(t *testing.T, announcer Announcer) (*Backend, *identity.Ide
 func TestBackendWithIdentityServesOnlyTLS(t *testing.T) {
 	testBackend, deviceIdentity := startTLSBackend(t, nil)
 
-	client := &http.Client{Transport: &http.Transport{TLSClientConfig: identity.ClientConfig(deviceIdentity.Fingerprint())}}
+	client := &http.Client{Transport: &http.Transport{TLSClientConfig: identity.ClientConfig(deviceIdentity.Fingerprint(), nil)}}
 	response, err := client.Get("https://" + testBackend.Addr() + "/health")
 	if err != nil {
 		t.Fatalf("GET over TLS: %v", err)

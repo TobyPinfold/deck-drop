@@ -100,16 +100,34 @@ func (identity *Identity) ServerConfig() *tls.Config {
 	return &tls.Config{
 		Certificates: []tls.Certificate{identity.certificate},
 		MinVersion:   tls.VersionTLS13,
+		// Clients present their certificate so the server learns who is
+		// calling; it is checked against the paired devices, not a CA.
+		ClientAuth: tls.RequestClientCert,
 	}
 }
 
-// ClientConfig is the TLS configuration for connecting to another device.
+// PeerFingerprint is the fingerprint of the certificate the other end of the
+// connection presented, or empty if it presented none.
+func PeerFingerprint(state *tls.ConnectionState) string {
+	if state == nil || len(state.PeerCertificates) == 0 {
+		return ""
+	}
+	return Fingerprint(state.PeerCertificates[0].Raw)
+}
+
+// ClientConfig is the TLS configuration for connecting to another device,
+// presenting self as the client certificate (nil presents none).
 // Self-signed certificates cannot be checked against a certificate authority,
 // so the connection is accepted only if the device's certificate has the
 // pinned fingerprint. An empty pin accepts any certificate: the connection is
 // encrypted but the device is not authenticated.
-func ClientConfig(pin string) *tls.Config {
+func ClientConfig(pin string, self *Identity) *tls.Config {
+	var certificates []tls.Certificate
+	if self != nil {
+		certificates = []tls.Certificate{self.certificate}
+	}
 	return &tls.Config{
+		Certificates:       certificates,
 		MinVersion:         tls.VersionTLS13,
 		InsecureSkipVerify: true, // #nosec G402 -- the certificate is verified by VerifyPeerCertificate
 		VerifyPeerCertificate: func(rawCerts [][]byte, _ [][]*x509.Certificate) error {
@@ -149,7 +167,7 @@ func generatePEM() (certPEM, keyPEM []byte, err error) {
 		NotBefore:    now.Add(-time.Hour),
 		NotAfter:     now.Add(validFor),
 		KeyUsage:     x509.KeyUsageDigitalSignature,
-		ExtKeyUsage:  []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
+		ExtKeyUsage:  []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth, x509.ExtKeyUsageClientAuth},
 	}
 	der, err := x509.CreateCertificate(rand.Reader, template, template, &key.PublicKey, key)
 	if err != nil {
