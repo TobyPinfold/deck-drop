@@ -6,6 +6,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"log/slog"
 	"net"
 	"net/http"
@@ -27,6 +28,8 @@ type Backend struct {
 	server   *http.Server
 	listener net.Listener
 	served   chan struct{}
+
+	announcement io.Closer
 }
 
 // New returns a stopped Backend that logs to logger.
@@ -58,6 +61,7 @@ func (backend *Backend) Start() error {
 	backend.served = make(chan struct{})
 
 	go backend.serve(server, listener, backend.served)
+	backend.announce()
 
 	backend.log.Info("backend started", "addr", listener.Addr().String())
 	return nil
@@ -80,6 +84,8 @@ func (backend *Backend) Stop() error {
 	if backend.server == nil {
 		return nil
 	}
+
+	backend.stopAnnouncing()
 
 	ctx, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
 	defer cancel()
@@ -104,6 +110,17 @@ func (backend *Backend) Running() bool {
 	return backend.server != nil
 }
 
+// Port returns the port the server is listening on, or zero when stopped.
+func (backend *Backend) Port() int {
+	backend.mu.Lock()
+	defer backend.mu.Unlock()
+
+	if backend.listener == nil {
+		return 0
+	}
+	return backend.listener.Addr().(*net.TCPAddr).Port
+}
+
 // Addr returns the address the server is listening on, or an empty string
 // when stopped.
 func (backend *Backend) Addr() string {
@@ -114,4 +131,30 @@ func (backend *Backend) Addr() string {
 		return ""
 	}
 	return backend.listener.Addr().String()
+}
+
+// announce advertises the device. A failure is logged rather than returned
+// because file receiving still works without discovery.
+func (backend *Backend) announce() {
+	if backend.config.Announcer == nil {
+		return
+	}
+
+	port := backend.listener.Addr().(*net.TCPAddr).Port
+	announcement, err := backend.config.Announcer.Announce(backend.config.DeviceName, port)
+	if err != nil {
+		backend.log.Warn("failed to announce device on the network", "error", err)
+		return
+	}
+	backend.announcement = announcement
+}
+
+func (backend *Backend) stopAnnouncing() {
+	if backend.announcement == nil {
+		return
+	}
+	if err := backend.announcement.Close(); err != nil {
+		backend.log.Warn("failed to stop announcing device", "error", err)
+	}
+	backend.announcement = nil
 }

@@ -7,11 +7,15 @@ import (
 	"syscall"
 
 	"github.com/TobyPinfold/deck-drop/internal/backend"
+	"github.com/TobyPinfold/deck-drop/internal/discovery"
 )
 
 func main() {
 	logger := slog.New(slog.NewTextHandler(os.Stderr, nil))
-	backendService := backend.New(logger, backend.DefaultConfig())
+
+	config := backend.DefaultConfig()
+	config.Announcer = discovery.MDNS{}
+	backendService := backend.New(logger, config)
 
 	if err := backendService.Start(); err != nil {
 		logger.Error("failed to start backend", "error", err)

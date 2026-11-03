@@ -9,3 +9,25 @@ func TestDefaultConfigUsesPort8080(t *testing.T) {
 		t.Fatalf("default port = %d, want 8080", config.Port)
 	}
 }
+
+func TestDefaultConfigHasDeviceName(t *testing.T) {
+	config := DefaultConfig()
+
+	if config.DeviceName == "" {
+		t.Fatal("default device name should not be empty")
+	}
+}
+
+func TestShortHostnameDropsDomain(t *testing.T) {
+	tests := map[string]string{
+		"steamdeck":       "steamdeck",
+		"my-laptop.local": "my-laptop",
+		"pc.example.com":  "pc",
+	}
+
+	for hostname, want := range tests {
+		if got := shortHostname(hostname); got != want {
+			t.Errorf("shortHostname(%q) = %q, want %q", hostname, got, want)
+		}
+	}
+}
