@@ -9,15 +9,17 @@ import (
 	"testing"
 )
 
-func newTestBackend(logBuffer *bytes.Buffer) *Backend {
+func newTestBackend(t *testing.T, logBuffer *bytes.Buffer) *Backend {
+	t.Helper()
+
 	logger := slog.New(slog.NewTextHandler(logBuffer, nil))
-	return New(logger, Config{Port: 0})
+	return New(logger, Config{Port: 0, ReceiveDir: t.TempDir()})
 }
 
 func startTestBackend(t *testing.T) *Backend {
 	t.Helper()
 
-	testBackend := newTestBackend(&bytes.Buffer{})
+	testBackend := newTestBackend(t, &bytes.Buffer{})
 	if err := testBackend.Start(); err != nil {
 		t.Fatalf("Start: %v", err)
 	}
@@ -41,7 +43,7 @@ func requestTo(t *testing.T, testBackend *Backend, method, path string) *http.Re
 }
 
 func TestStartAndStop(t *testing.T) {
-	testBackend := newTestBackend(&bytes.Buffer{})
+	testBackend := newTestBackend(t, &bytes.Buffer{})
 
 	if testBackend.Running() {
 		t.Fatal("backend should not be running before Start")
@@ -69,7 +71,7 @@ func TestStartTwiceFails(t *testing.T) {
 }
 
 func TestStopWhenNotRunningIsNoop(t *testing.T) {
-	testBackend := newTestBackend(&bytes.Buffer{})
+	testBackend := newTestBackend(t, &bytes.Buffer{})
 
 	if err := testBackend.Stop(); err != nil {
 		t.Fatalf("Stop on idle backend: %v", err)
@@ -78,7 +80,7 @@ func TestStopWhenNotRunningIsNoop(t *testing.T) {
 
 func TestLogsStartup(t *testing.T) {
 	var logBuffer bytes.Buffer
-	testBackend := newTestBackend(&logBuffer)
+	testBackend := newTestBackend(t, &logBuffer)
 	if err := testBackend.Start(); err != nil {
 		t.Fatalf("Start: %v", err)
 	}
@@ -97,7 +99,7 @@ func TestStartFailsWhenPortIsTaken(t *testing.T) {
 	t.Cleanup(func() { _ = listener.Close() })
 
 	takenPort := listener.Addr().(*net.TCPAddr).Port
-	testBackend := New(slog.New(slog.NewTextHandler(&bytes.Buffer{}, nil)), Config{Port: takenPort})
+	testBackend := New(slog.New(slog.NewTextHandler(&bytes.Buffer{}, nil)), Config{Port: takenPort, ReceiveDir: t.TempDir()})
 
 	if err := testBackend.Start(); err == nil {
 		_ = testBackend.Stop()

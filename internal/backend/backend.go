@@ -12,6 +12,8 @@ import (
 	"net/http"
 	"sync"
 	"time"
+
+	"github.com/TobyPinfold/deck-drop/internal/transfer"
 )
 
 const (
@@ -30,6 +32,7 @@ type Backend struct {
 	served   chan struct{}
 
 	announcement io.Closer
+	receiver     *transfer.Receiver
 }
 
 // New returns a stopped Backend that logs to logger.
@@ -47,17 +50,24 @@ func (backend *Backend) Start() error {
 		return errors.New("backend already running")
 	}
 
+	receiver, err := transfer.NewReceiver(backend.config.ReceiveDir)
+	if err != nil {
+		return err
+	}
+
 	listener, err := net.Listen("tcp", fmt.Sprintf(":%d", backend.config.Port))
 	if err != nil {
+		_ = receiver.Close()
 		return fmt.Errorf("listen on port %d: %w", backend.config.Port, err)
 	}
 
 	server := &http.Server{
-		Handler:           newRouter(),
+		Handler:           newRouter(receiver, backend.log),
 		ReadHeaderTimeout: readHeaderTimeout,
 	}
 	backend.server = server
 	backend.listener = listener
+	backend.receiver = receiver
 	backend.served = make(chan struct{})
 
 	go backend.serve(server, listener, backend.served)
@@ -92,11 +102,16 @@ func (backend *Backend) Stop() error {
 
 	err := backend.server.Shutdown(ctx)
 	<-backend.served // Serve closes the listener on return, so the port is free afterwards
+	closeErr := backend.receiver.Close()
 	backend.server = nil
 	backend.listener = nil
 	backend.served = nil
+	backend.receiver = nil
 	if err != nil {
 		return fmt.Errorf("shut down http server: %w", err)
+	}
+	if closeErr != nil {
+		return fmt.Errorf("close receive directory: %w", closeErr)
 	}
 
 	backend.log.Info("backend stopped")

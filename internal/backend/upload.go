@@ -1,0 +1,46 @@
+package backend
+
+import (
+	"errors"
+	"log/slog"
+	"net/http"
+	"strconv"
+
+	"github.com/TobyPinfold/deck-drop/internal/transfer"
+)
+
+const (
+	fileNameHeader   = "X-File-Name"
+	fileOffsetHeader = "X-File-Offset"
+)
+
+type uploadHandler struct {
+	receiver *transfer.Receiver
+	log      *slog.Logger
+}
+
+// ServeHTTP writes the request body into the named file at the given offset.
+func (handler uploadHandler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
+	name := request.Header.Get(fileNameHeader)
+	offset, err := strconv.ParseInt(request.Header.Get(fileOffsetHeader), 10, 64)
+	if name == "" || err != nil {
+		http.Error(writer, "missing or invalid "+fileNameHeader+" or "+fileOffsetHeader+" header", http.StatusBadRequest)
+		return
+	}
+
+	if _, err := handler.receiver.WriteChunk(name, offset, request.Body); err != nil {
+		handler.writeError(writer, name, err)
+		return
+	}
+	writer.WriteHeader(http.StatusNoContent)
+}
+
+func (handler uploadHandler) writeError(writer http.ResponseWriter, name string, err error) {
+	if errors.Is(err, transfer.ErrInvalidName) || errors.Is(err, transfer.ErrInvalidOffset) {
+		http.Error(writer, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	handler.log.Error("failed to write chunk", "file", name, "error", err)
+	http.Error(writer, "failed to write chunk", http.StatusInternalServerError)
+}

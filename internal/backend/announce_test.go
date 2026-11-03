@@ -32,14 +32,16 @@ type closerFunc func() error
 
 func (closer closerFunc) Close() error { return closer() }
 
-func newAnnouncingBackend(logBuffer *bytes.Buffer, announcer Announcer) *Backend {
+func newAnnouncingBackend(t *testing.T, logBuffer *bytes.Buffer, announcer Announcer) *Backend {
+	t.Helper()
+
 	logger := slog.New(slog.NewTextHandler(logBuffer, nil))
-	return New(logger, Config{Port: 0, DeviceName: "steam-deck", Announcer: announcer})
+	return New(logger, Config{Port: 0, ReceiveDir: t.TempDir(), DeviceName: "steam-deck", Announcer: announcer})
 }
 
 func TestStartAnnouncesDeviceOnListeningPort(t *testing.T) {
 	announcer := &fakeAnnouncer{}
-	testBackend := newAnnouncingBackend(&bytes.Buffer{}, announcer)
+	testBackend := newAnnouncingBackend(t, &bytes.Buffer{}, announcer)
 	if err := testBackend.Start(); err != nil {
 		t.Fatalf("Start: %v", err)
 	}
@@ -55,7 +57,7 @@ func TestStartAnnouncesDeviceOnListeningPort(t *testing.T) {
 
 func TestStopEndsAnnouncement(t *testing.T) {
 	announcer := &fakeAnnouncer{}
-	testBackend := newAnnouncingBackend(&bytes.Buffer{}, announcer)
+	testBackend := newAnnouncingBackend(t, &bytes.Buffer{}, announcer)
 	if err := testBackend.Start(); err != nil {
 		t.Fatalf("Start: %v", err)
 	}
@@ -72,7 +74,7 @@ func TestStopEndsAnnouncement(t *testing.T) {
 func TestStartSucceedsWhenAnnouncingFails(t *testing.T) {
 	var logBuffer bytes.Buffer
 	announcer := &fakeAnnouncer{err: errors.New("no multicast")}
-	testBackend := newAnnouncingBackend(&logBuffer, announcer)
+	testBackend := newAnnouncingBackend(t, &logBuffer, announcer)
 
 	if err := testBackend.Start(); err != nil {
 		t.Fatalf("Start should tolerate announce failure: %v", err)
@@ -88,7 +90,7 @@ func TestStartSucceedsWhenAnnouncingFails(t *testing.T) {
 }
 
 func TestStartWithoutAnnouncerDoesNotAnnounce(t *testing.T) {
-	testBackend := newAnnouncingBackend(&bytes.Buffer{}, nil)
+	testBackend := newAnnouncingBackend(t, &bytes.Buffer{}, nil)
 
 	if err := testBackend.Start(); err != nil {
 		t.Fatalf("Start: %v", err)
