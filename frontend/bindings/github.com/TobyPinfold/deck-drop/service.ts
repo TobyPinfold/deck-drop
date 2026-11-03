@@ -14,6 +14,16 @@ import { Call as $Call, CancellablePromise as $CancellablePromise } from "@wails
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
 import * as app$0 from "./internal/app/models.js";
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore: Unused imports
+import * as discovery$0 from "./internal/discovery/models.js";
+
+/**
+ * Devices lists the other DeckDrop devices currently on the network.
+ */
+export function Devices(): $CancellablePromise<discovery$0.Device[] | null> {
+    return $Call.ByID(939530384);
+}
 
 /**
  * Info reports whether the backend is running and where.
