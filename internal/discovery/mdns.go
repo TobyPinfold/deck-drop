@@ -5,6 +5,7 @@ package discovery
 import (
 	"fmt"
 	"io"
+	"strings"
 	"sync"
 
 	"github.com/libp2p/zeroconf/v2"
@@ -24,7 +25,7 @@ type Registration struct {
 // Announce advertises an instance of the DeckDrop service on port.
 // Call Close to stop the announcement.
 func Announce(instance string, port int) (*Registration, error) {
-	server, err := zeroconf.Register(instance, ServiceType, serviceDomain, port, []string{"path=/upload"}, nil)
+	server, err := zeroconf.Register(sanitiseInstance(instance), ServiceType, serviceDomain, port, []string{"path=/upload"}, nil)
 	if err != nil {
 		return nil, fmt.Errorf("register mDNS service: %w", err)
 	}
@@ -47,4 +48,10 @@ func (MDNS) Announce(instance string, port int) (io.Closer, error) {
 		return nil, err
 	}
 	return registration, nil
+}
+
+// sanitiseInstance replaces dots, which other devices fail to resolve in an
+// instance name.
+func sanitiseInstance(instance string) string {
+	return strings.ReplaceAll(instance, ".", "-")
 }
