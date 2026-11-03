@@ -44,13 +44,11 @@ jobs:
       - name: Install Linux build dependencies
         if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev
-      - run: go install github.com/wailsapp/wails/v2/cmd/wails@v2.17.1
-      - name: Build (Linux)
-        if: runner.os == 'Linux'
-        run: wails build -tags webkit2_41
-      - name: Build (Windows)
-        if: runner.os == 'Windows'
-        run: wails build
+      - run: go install github.com/wailsapp/wails/v3/cmd/wails3@v3.0.0
+      - name: Add Go binaries to PATH
+        shell: bash
+        run: echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
+      - run: wails3 build
 
   lint:
     runs-on: ubuntu-latest
@@ -64,4 +62,3 @@ jobs:
       - uses: golangci/golangci-lint-action@v8
         with:
           version: latest
-          args: --build-tags webkit2_41

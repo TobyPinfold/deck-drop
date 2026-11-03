@@ -8,13 +8,13 @@ A steam deck first approach to file sharing
 
 ## Desktop app
 
-DeckDrop is a single binary: a [Wails](https://wails.io) window that embeds the backend. The backend starts and stops with the window.
+DeckDrop is a single binary: a [Wails v3](https://v3.wails.io) window that embeds the backend. The backend starts and stops with the window.
 
-Prerequisites: Go, Node.js and the Wails CLI (`go install github.com/wailsapp/wails/v2/cmd/wails@v2.17.1`). On Linux/Steam Deck also install GTK 3 and WebKitGTK 4.1 (for example `libgtk-3-dev libwebkit2gtk-4.1-dev`) and pass `-tags webkit2_41` to the commands below (`make app WAILS_FLAGS="-tags webkit2_41"`).
+Prerequisites: Go, Node.js and the Wails CLI (`go install github.com/wailsapp/wails/v3/cmd/wails3@v3.0.0`, make sure `$(go env GOPATH)/bin` is on your `PATH`). On Linux/Steam Deck also install GTK 3 and WebKitGTK 4.1 (for example `libgtk-3-dev libwebkit2gtk-4.1-dev`). Run `wails3 doctor` to check your setup.
 
 ```sh
-wails dev     # run with live reload
-make app      # build the app into build/bin
+wails3 dev    # run with live reload
+make app      # build the app into bin/
 ```
 
 ## Headless backend

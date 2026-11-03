@@ -4,9 +4,9 @@
 build:
 	go build ./cmd/... ./internal/...
 
-# Builds the desktop app with Wails (see README for prerequisites).
+# Builds the desktop app into bin/ (see README for prerequisites).
 app:
-	wails build $(WAILS_FLAGS)
+	wails3 build
 
 test:
 	go test ./cmd/... ./internal/...

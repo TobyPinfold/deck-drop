@@ -1,5 +1,5 @@
 import './style.css';
-import {Info} from '../wailsjs/go/app/App';
+import {Info} from '../bindings/github.com/TobyPinfold/deck-drop/service.js';
 
 const status = document.querySelector('#status');
 
