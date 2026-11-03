@@ -149,3 +149,42 @@ func TestStartFailsWhenReceiveDirCannotBeCreated(t *testing.T) {
 		t.Fatal("backend should not be running after a failed Start")
 	}
 }
+
+func TestUploadOverMaxChunkSizeIsRejected(t *testing.T) {
+	testBackend := newTestBackend(t, &bytes.Buffer{})
+	testBackend.config.MaxChunkSize = 100
+	if err := testBackend.Start(); err != nil {
+		t.Fatalf("Start: %v", err)
+	}
+	t.Cleanup(func() { _ = testBackend.Stop() })
+
+	response := postChunk(t, testBackend, "big.bin", "0", randomBytes(t, 101))
+
+	if response.StatusCode != http.StatusRequestEntityTooLarge {
+		t.Fatalf("status = %d, want %d", response.StatusCode, http.StatusRequestEntityTooLarge)
+	}
+}
+
+func TestUploadAtMaxChunkSizeIsAccepted(t *testing.T) {
+	testBackend := newTestBackend(t, &bytes.Buffer{})
+	testBackend.config.MaxChunkSize = 100
+	if err := testBackend.Start(); err != nil {
+		t.Fatalf("Start: %v", err)
+	}
+	t.Cleanup(func() { _ = testBackend.Stop() })
+	content := randomBytes(t, 100)
+
+	uploadChunk(t, testBackend, "exact.bin", 0, content)
+
+	if !bytes.Equal(receivedFile(t, testBackend, "exact.bin"), content) {
+		t.Fatal("received file differs from the uploaded content")
+	}
+}
+
+func TestDefaultMaxChunkSizeAppliesWhenNotConfigured(t *testing.T) {
+	config := Config{}
+
+	if config.maxChunkSize() != defaultMaxChunkSize {
+		t.Fatalf("maxChunkSize = %d, want %d", config.maxChunkSize(), defaultMaxChunkSize)
+	}
+}
