@@ -1,0 +1,15 @@
+{
+	"fixed": {
+		"file_version": "0.0.1"
+	},
+	"info": {
+		"0409": {
+			"ProductVersion": "0.0.1",
+			"CompanyName": "DeckDrop",
+			"FileDescription": "Steam Deck first local network file sharing",
+			"LegalCopyright": "DeckDrop",
+			"ProductName": "DeckDrop",
+			"Comments": "This is a comment"
+		}
+	}
+}

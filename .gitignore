@@ -34,3 +34,12 @@ go.work.sum
 
 # Files received by a local run
 received_files/
+
+# Wails
+bin/
+node_modules/
+frontend/dist/*
+!frontend/dist/gitkeep
+.task/
+build/linux/appimage/build
+build/windows/nsis/MicrosoftEdgeWebview2Setup.exe

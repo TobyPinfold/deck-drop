@@ -28,6 +28,28 @@ jobs:
           go-version: stable
       - run: make test
 
+  app:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: stable
+      - uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+      - name: Install Linux build dependencies
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y libgtk-4-dev libwebkitgtk-6.0-dev
+      - run: go install github.com/wailsapp/wails/v3/cmd/wails3@v3.0.0
+      - name: Add Go binaries to PATH
+        shell: bash
+        run: echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
+      - run: wails3 build
+
   lint:
     runs-on: ubuntu-latest
     steps:
@@ -35,6 +57,8 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version: stable
+      - name: Install build dependencies for the desktop app package
+        run: sudo apt-get update && sudo apt-get install -y libgtk-4-dev libwebkitgtk-6.0-dev
       - uses: golangci/golangci-lint-action@v8
         with:
           version: latest

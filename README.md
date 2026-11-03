@@ -6,7 +6,18 @@ A steam deck first approach to file sharing
 - Go 1.27 or newer (see `go.mod`)
 - [golangci-lint](https://golangci-lint.run/) for `make lint` (optional)
 
-## Build, run and test
+## Desktop app
+
+DeckDrop is a single binary: a [Wails v3](https://v3.wails.io) window that embeds the backend. The backend starts and stops with the window.
+
+Prerequisites: Go, Node.js and the Wails CLI (`go install github.com/wailsapp/wails/v3/cmd/wails3@v3.0.0`, make sure `$(go env GOPATH)/bin` is on your `PATH`). On Linux/Steam Deck also install GTK 4 and WebKitGTK 6.0 (for example `libgtk-4-dev libwebkitgtk-6.0-dev`). Run `wails3 doctor` to check your setup.
+
+```sh
+wails3 dev    # run with live reload
+make app      # build the app into bin/
+```
+
+## Headless backend
 
 ```sh
 go build -o deckdrop ./cmd/deckdrop   # build the binary
