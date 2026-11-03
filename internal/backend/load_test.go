@@ -3,18 +3,19 @@ package backend
 import (
 	"bytes"
 	"errors"
-	"flag"
 	"testing"
 )
-
-func environmentOf(values map[string]string) func(string) string {
-	return func(key string) string { return values[key] }
-}
 
 func loadConfig(t *testing.T, args []string, environment map[string]string) (Config, error) {
 	t.Helper()
 
-	return LoadConfig(args, environmentOf(environment), &bytes.Buffer{})
+	for _, name := range []string{portEnvironmentVariable, receiveDirEnvironmentVariable, deviceNameEnvironmentVariable} {
+		t.Setenv(name, "")
+	}
+	for name, value := range environment {
+		t.Setenv(name, value)
+	}
+	return LoadConfig(args, &bytes.Buffer{})
 }
 
 func TestLoadConfigDefaultsWorkWithNoConfiguration(t *testing.T) {
@@ -46,7 +47,7 @@ func TestLoadConfigReadsEnvironment(t *testing.T) {
 }
 
 func TestLoadConfigReadsFlags(t *testing.T) {
-	args := []string{"-port", "9100", "-dir", "/tmp/files", "-name", "living-room-pc"}
+	args := []string{"--port", "9100", "--dir", "/tmp/files", "--name", "living-room-pc"}
 
 	config, err := loadConfig(t, args, nil)
 
@@ -61,7 +62,7 @@ func TestLoadConfigReadsFlags(t *testing.T) {
 func TestLoadConfigFlagsOverrideEnvironment(t *testing.T) {
 	environment := map[string]string{"DECKDROP_PORT": "9000", "DECKDROP_DEVICE_NAME": "from-env"}
 
-	config, err := loadConfig(t, []string{"-port", "9100"}, environment)
+	config, err := loadConfig(t, []string{"--port", "9100"}, environment)
 
 	if err != nil {
 		t.Fatalf("LoadConfig: %v", err)
@@ -80,12 +81,13 @@ func TestLoadConfigRejectsInvalidValues(t *testing.T) {
 		environment map[string]string
 	}{
 		"non-numeric port in environment": {environment: map[string]string{"DECKDROP_PORT": "abc"}},
-		"port too high":                   {args: []string{"-port", "70000"}},
-		"port zero":                       {args: []string{"-port", "0"}},
-		"negative port":                   {args: []string{"-port", "-1"}},
-		"empty directory":                 {args: []string{"-dir", ""}},
-		"empty device name":               {args: []string{"-name", ""}},
-		"unknown flag":                    {args: []string{"-nope"}},
+		"non-numeric port flag":           {args: []string{"--port", "abc"}},
+		"port too high":                   {args: []string{"--port", "70000"}},
+		"port zero":                       {args: []string{"--port", "0"}},
+		"negative port":                   {args: []string{"--port=-1"}},
+		"empty directory":                 {args: []string{"--dir", ""}},
+		"empty device name":               {args: []string{"--name", ""}},
+		"unknown flag":                    {args: []string{"--nope"}},
 		"unexpected argument":             {args: []string{"stray"}},
 	}
 
@@ -101,12 +103,12 @@ func TestLoadConfigRejectsInvalidValues(t *testing.T) {
 func TestLoadConfigHelpFlagReturnsErrHelpAndPrintsUsage(t *testing.T) {
 	var output bytes.Buffer
 
-	_, err := LoadConfig([]string{"-h"}, environmentOf(nil), &output)
+	_, err := LoadConfig([]string{"--help"}, &output)
 
-	if !errors.Is(err, flag.ErrHelp) {
-		t.Fatalf("error = %v, want flag.ErrHelp", err)
+	if !errors.Is(err, ErrHelp) {
+		t.Fatalf("error = %v, want ErrHelp", err)
 	}
-	for _, want := range []string{"-port", "-dir", "-name", "DECKDROP_PORT"} {
+	for _, want := range []string{"--port", "--dir", "--name", "DECKDROP_PORT"} {
 		if !bytes.Contains(output.Bytes(), []byte(want)) {
 			t.Errorf("usage does not mention %q:\n%s", want, output.String())
 		}
