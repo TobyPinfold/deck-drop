@@ -10,8 +10,6 @@ import (
 	"path/filepath"
 	"slices"
 	"sync"
-
-	"github.com/google/renameio/v2"
 )
 
 const (
@@ -133,8 +131,12 @@ func (store *Store) save(peers []Peer) error {
 	if err := os.MkdirAll(filepath.Dir(store.path), 0o700); err != nil {
 		return fmt.Errorf("create paired devices directory: %w", err)
 	}
-	if err := renameio.WriteFile(store.path, data, 0o600); err != nil {
-		return fmt.Errorf("save paired devices: %w", err)
+	temporary := store.path + ".tmp"
+	if err := os.WriteFile(temporary, data, 0o600); err != nil {
+		return fmt.Errorf("write paired devices: %w", err)
+	}
+	if err := os.Rename(temporary, store.path); err != nil {
+		return fmt.Errorf("replace paired devices: %w", err)
 	}
 	return nil
 }
