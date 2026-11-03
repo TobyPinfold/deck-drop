@@ -6,13 +6,13 @@
 name: "deckdrop"
 arch: ${GOARCH}
 platform: "linux"
-version: "0.1.0"
+version: "0.0.1"
 section: "default"
 priority: "extra"
 maintainer: ${GIT_COMMITTER_NAME} <${GIT_COMMITTER_EMAIL}>
-description: "A deckdrop application"
-vendor: "My Company"
-homepage: "https://wails.io"
+description: "Steam Deck first local network file sharing"
+vendor: "DeckDrop"
+homepage: "https://github.com/TobyPinfold/deck-drop"
 license: "MIT"
 release: "1"
 
