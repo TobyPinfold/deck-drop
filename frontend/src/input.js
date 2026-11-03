@@ -18,7 +18,7 @@ function scrollableAncestor(element) {
             return parent;
         }
     }
-    return null;
+    return document.scrollingElement;
 }
 
 function focus(element) {

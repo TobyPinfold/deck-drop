@@ -237,6 +237,6 @@ startNavigation({
         if (!focusDeviceTile(selectedName)) {
             deviceList.querySelector('.tile')?.focus();
         }
-        document.querySelector('.column').scrollTo({top: 0});
+        window.scrollTo({top: 0});
     },
 });
