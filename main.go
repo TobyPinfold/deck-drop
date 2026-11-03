@@ -3,8 +3,11 @@ package main
 import (
 	"context"
 	"embed"
+	"errors"
 	"log/slog"
 	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
@@ -17,6 +20,8 @@ import (
 )
 
 const (
+	usageExitCode = 2
+
 	scanDuration = 3 * time.Second
 	scanInterval = 2 * time.Second
 
@@ -83,10 +88,28 @@ func (service *service) Info() app.Info {
 func main() {
 	logger := slog.New(slog.NewTextHandler(os.Stderr, nil))
 
-	config := backend.DefaultConfig()
-	config.Announcer = discovery.MDNS{}
+	defaults := backend.DefaultConfig()
 	if homeDir, err := os.UserHomeDir(); err == nil {
-		config.ReceiveDir = app.DefaultReceiveDir(homeDir)
+		defaults.ReceiveDir = app.DefaultReceiveDir(homeDir)
+	}
+	config, err := backend.LoadConfig(defaults, os.Args[1:], os.Stderr)
+	if errors.Is(err, backend.ErrHelp) {
+		return
+	}
+	if err != nil {
+		logger.Error("invalid configuration", "error", err)
+		os.Exit(usageExitCode)
+	}
+	config.Announcer = discovery.MDNS{}
+
+	if config.Headless {
+		ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+		defer stop()
+		if err := backend.Serve(ctx, logger, config); err != nil {
+			logger.Error("backend failed", "error", err)
+			os.Exit(1)
+		}
+		return
 	}
 
 	var desktop *application.App
