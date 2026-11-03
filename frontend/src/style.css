@@ -58,7 +58,7 @@ h2 {
     cursor: pointer;
 }
 
-.tile:focus-visible {
+.tile:focus {
     outline: none;
     border-color: #fff;
     transform: scale(1.03);
@@ -87,7 +87,7 @@ h2 {
     font-size: 18px;
 }
 
-.send {
+.panel {
     display: flex;
     align-items: center;
     gap: 24px;
@@ -108,7 +108,7 @@ h2 {
     cursor: pointer;
 }
 
-.action:focus-visible {
+.action:focus {
     outline: none;
     border-color: #fff;
     transform: scale(1.03);
@@ -213,4 +213,9 @@ h2 {
     border-radius: 10px;
     background: var(--tile);
     font-size: 18px;
+}
+
+.action {
+    min-height: 56px;
+    white-space: nowrap;
 }
