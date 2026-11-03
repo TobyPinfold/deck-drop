@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -328,5 +329,34 @@ func TestUploadLogsWhereTheFileIsSaved(t *testing.T) {
 	want := filepath.Join(testBackend.config.ReceiveDir, "photo.jpg")
 	if strings.Count(logs, "receiving file") != 1 || !strings.Contains(logs, want) {
 		t.Errorf("logs = %q, want one \"receiving file\" entry mentioning %q", logs, want)
+	}
+}
+
+type recordingReceipts struct {
+	mu    sync.Mutex
+	names []string
+}
+
+func (receipts *recordingReceipts) Received(name string) {
+	receipts.mu.Lock()
+	defer receipts.mu.Unlock()
+	receipts.names = append(receipts.names, name)
+}
+
+func TestUploadTellsTheReceiptListenerAboutTheFile(t *testing.T) {
+	receipts := &recordingReceipts{}
+	testBackend := New(slog.New(slog.NewTextHandler(io.Discard, nil)), Config{ReceiveDir: t.TempDir(), Receipts: receipts})
+	if err := testBackend.Start(); err != nil {
+		t.Fatalf("Start: %v", err)
+	}
+	t.Cleanup(func() { _ = testBackend.Stop() })
+
+	uploadChunk(t, testBackend, "photo.png", 0, []byte("data"))
+	postChunk(t, testBackend, "", "0", []byte("rejected"))
+
+	receipts.mu.Lock()
+	defer receipts.mu.Unlock()
+	if len(receipts.names) != 1 || receipts.names[0] != "photo.png" {
+		t.Fatalf("receipts = %v, want only photo.png", receipts.names)
 	}
 }

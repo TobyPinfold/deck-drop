@@ -62,7 +62,7 @@ func (backend *Backend) Start() error {
 	}
 
 	server := &http.Server{
-		Handler:           newRouter(receiver, backend.log, backend.config.ReceiveDir, backend.config.maxChunkSize()),
+		Handler:           newRouter(receiver, backend.log, backend.config),
 		ReadHeaderTimeout: readHeaderTimeout,
 	}
 	backend.server = server
