@@ -35,6 +35,29 @@
         </div>
         <ul id="received" class="received"></ul>
         <p id="received-empty" class="empty">Nothing received yet.</p>
+
+        <h2>Settings</h2>
+        <form id="settings" class="panel settings">
+            <label class="field">
+                <span>Device name</span>
+                <input id="setting-name" type="text" autocomplete="off" spellcheck="false" required>
+            </label>
+            <label class="field">
+                <span>Port</span>
+                <input id="setting-port" type="number" min="1" max="65535" required>
+            </label>
+            <div class="field">
+                <span>Receive folder</span>
+                <div class="folder">
+                    <code id="setting-dir"></code>
+                    <button id="choose-folder" class="action" type="button">Change folder</button>
+                </div>
+            </div>
+            <div class="form-actions">
+                <button id="save-settings" class="action" type="submit">Save</button>
+                <p id="settings-message" class="hint" role="status"></p>
+            </div>
+        </form>
     </div>
 </main>
 <script src="./src/main.js" type="module"></script>

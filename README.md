@@ -58,7 +58,9 @@ curl -i 'http://localhost:8080/status?filename=photo.jpg'
 
 ## Configuration
 
-DeckDrop works with no configuration. Settings can be overridden with environment variables or command-line flags; flags win over environment variables.
+DeckDrop works with no configuration. The device name, receive folder and port can be changed in the app's Settings section; changes apply immediately and are saved to `settings.json` in your user config folder (`~/Library/Application Support/DeckDrop` on macOS, `~/.config/DeckDrop` on Linux, `%AppData%\DeckDrop` on Windows). If the new port is already in use, the previous settings stay in effect.
+
+Environment variables and command-line flags override saved settings for that run; flags win over environment variables.
 
 | Flag     | Environment variable   | Default          | Description                              |
 | -------- | ---------------------- | ---------------- | ---------------------------------------- |

@@ -41,14 +41,13 @@ func (app *App) stopDiscoveryAndWait() {
 // handleDevices drops this device from the list, stores it and notifies the
 // listener.
 func (app *App) handleDevices(found []discovery.Device) {
+	app.mu.Lock()
 	others := make([]discovery.Device, 0, len(found))
 	for _, device := range found {
 		if device.Name != app.selfName {
 			others = append(others, device)
 		}
 	}
-
-	app.mu.Lock()
 	app.devices = others
 	app.mu.Unlock()
 

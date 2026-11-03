@@ -17,6 +17,7 @@ import (
 	"github.com/TobyPinfold/deck-drop/internal/app"
 	"github.com/TobyPinfold/deck-drop/internal/backend"
 	"github.com/TobyPinfold/deck-drop/internal/discovery"
+	"github.com/TobyPinfold/deck-drop/internal/settings"
 	"github.com/TobyPinfold/deck-drop/internal/transfer"
 )
 
@@ -116,6 +117,28 @@ func (service *service) ChooseFiles() ([]string, error) {
 		PromptForMultipleSelection()
 }
 
+// Settings returns the settings the app is running with.
+func (service *service) Settings() settings.Settings {
+	return service.app.Settings()
+}
+
+// SaveSettings applies and saves new settings. The backend restarts, so a
+// taken port is reported as an error.
+func (service *service) SaveSettings(updated settings.Settings) error {
+	return service.app.SaveSettings(updated)
+}
+
+// ChooseFolder asks the user to pick a folder and returns its path. It
+// returns an empty string if the user cancels.
+func (service *service) ChooseFolder() (string, error) {
+	return service.desktop.Dialog.OpenFile().
+		SetTitle("Choose where received files are saved").
+		CanChooseDirectories(true).
+		CanChooseFiles(false).
+		CanCreateDirectories(true).
+		PromptForSingleSelection()
+}
+
 // Info reports whether the backend is running and where.
 func (service *service) Info() app.Info {
 	return service.app.Info()
@@ -128,6 +151,19 @@ func main() {
 	if homeDir, err := os.UserHomeDir(); err == nil {
 		defaults.ReceiveDir = app.DefaultReceiveDir(homeDir)
 	}
+
+	// Saved settings replace the defaults; flags and environment variables
+	// still take precedence over them.
+	var settingsStore app.SettingsStore
+	if store, storeError := openSettingsStore(); storeError == nil {
+		settingsStore = store
+		saved, loadError := store.Load()
+		if loadError != nil {
+			logger.Warn("ignoring saved settings", "error", loadError)
+		}
+		defaults = saved.ApplyTo(defaults)
+	}
+
 	config, err := backend.LoadConfig(defaults, os.Args[1:], os.Stderr)
 	if errors.Is(err, backend.ErrHelp) {
 		return
@@ -155,6 +191,7 @@ func main() {
 		OnDevicesChanged: func(devices []discovery.Device) {
 			desktop.Event.Emit(devicesEvent, devices)
 		},
+		SettingsStore:    settingsStore,
 		Sender:           transfer.Sender{},
 		ProgressInterval: progressInterval,
 		OnTransfersChanged: func(transfers []app.Transfer) {
@@ -194,4 +231,12 @@ func main() {
 		logger.Error("application failed", "error", err)
 		os.Exit(1)
 	}
+}
+
+func openSettingsStore() (settings.Store, error) {
+	path, err := settings.DefaultPath()
+	if err != nil {
+		return settings.Store{}, err
+	}
+	return settings.NewStore(path), nil
 }

@@ -9,7 +9,7 @@ const SCROLL_SPEED = 24;
 const KEY_DIRECTIONS = {ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right'};
 
 function focusableElements() {
-    return [...document.querySelectorAll('button:not([disabled])')].filter((element) => element.offsetParent !== null);
+    return [...document.querySelectorAll('button:not([disabled]), input:not([disabled])')].filter((element) => element.offsetParent !== null);
 }
 
 function scrollableAncestor(element) {
@@ -65,7 +65,9 @@ export function startNavigation({onBack}) {
             move(input.direction);
         }
         if (repeaters.confirm.fire(input.confirm, now)) {
-            document.activeElement?.click();
+            if (document.activeElement?.tagName !== 'INPUT') {
+                document.activeElement?.click();
+            }
         }
         if (repeaters.back.fire(input.back, now)) {
             onBack();
@@ -79,7 +81,9 @@ export function startNavigation({onBack}) {
 
     document.addEventListener('keydown', (event) => {
         const direction = KEY_DIRECTIONS[event.key];
-        if (direction) {
+        // Left and right move the caret inside a text field.
+        const editing = document.activeElement?.tagName === 'INPUT';
+        if (direction && !(editing && (direction === 'left' || direction === 'right'))) {
             event.preventDefault();
             move(direction);
         } else if (event.key === 'Escape') {
