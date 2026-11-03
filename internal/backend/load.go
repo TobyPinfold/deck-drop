@@ -2,10 +2,10 @@ package backend
 
 import (
 	"errors"
-	"flag"
 	"fmt"
 	"io"
-	"strconv"
+
+	"github.com/alecthomas/kong"
 )
 
 const (
@@ -16,67 +16,74 @@ const (
 	maxPort = 65535
 )
 
-// LoadConfig builds a Config from the defaults, then environment variables,
-// then command-line flags, each overriding the previous. Usage and flag errors
-// are written to output. It returns flag.ErrHelp when help was requested.
-func LoadConfig(args []string, environment func(string) string, output io.Writer) (Config, error) {
-	config := DefaultConfig()
+// ErrHelp is returned by LoadConfig after printing usage because help was
+// requested.
+var ErrHelp = errors.New("help requested")
 
-	if value := environment(portEnvironmentVariable); value != "" {
-		port, err := parsePort(value)
-		if err != nil {
-			return Config{}, fmt.Errorf("%s: %w", portEnvironmentVariable, err)
-		}
-		config.Port = port
-	}
-	if value := environment(receiveDirEnvironmentVariable); value != "" {
-		config.ReceiveDir = value
-	}
-	if value := environment(deviceNameEnvironmentVariable); value != "" {
-		config.DeviceName = value
-	}
-
-	flags := flag.NewFlagSet("deckdrop", flag.ContinueOnError)
-	flags.SetOutput(output)
-	flags.Func("port", fmt.Sprintf("TCP port to listen on (env %s, default %d)", portEnvironmentVariable, config.Port),
-		func(value string) error {
-			port, err := parsePort(value)
-			if err != nil {
-				return err
-			}
-			config.Port = port
-			return nil
-		})
-	flags.Func("dir", fmt.Sprintf("directory received files are saved to (env %s, default %q)", receiveDirEnvironmentVariable, config.ReceiveDir),
-		func(value string) error {
-			if value == "" {
-				return errors.New("must not be empty")
-			}
-			config.ReceiveDir = value
-			return nil
-		})
-	flags.Func("name", fmt.Sprintf("device name shown to other devices (env %s, default %q)", deviceNameEnvironmentVariable, config.DeviceName),
-		func(value string) error {
-			if value == "" {
-				return errors.New("must not be empty")
-			}
-			config.DeviceName = value
-			return nil
-		})
-
-	if err := flags.Parse(args); err != nil {
-		return Config{}, err
-	}
-	if flags.NArg() > 0 {
-		return Config{}, fmt.Errorf("unexpected argument %q", flags.Arg(0))
-	}
-	return config, nil
+// options describes the command line. Kong resolves each value from the flag,
+// then the environment variable, then the default.
+type options struct {
+	Port int    `help:"TCP port to listen on (1-${max_port})." env:"DECKDROP_PORT" default:"${default_port}"`
+	Dir  string `help:"Directory received files are saved to." env:"DECKDROP_RECEIVE_DIR" default:"${default_dir}"`
+	Name string `help:"Device name shown to other devices." env:"DECKDROP_DEVICE_NAME" default:"${default_name}"`
 }
 
-func parsePort(value string) (int, error) {
-	port, err := strconv.Atoi(value)
-	if err != nil || port < 1 || port > maxPort {
-		return 0, fmt.Errorf("%q is not a port between 1 and %d", value, maxPort)
+// Validate is called by kong after parsing.
+func (parsed *options) Validate() error {
+	if parsed.Port < 1 || parsed.Port > maxPort {
+		return fmt.Errorf("--port must be between 1 and %d, got %d", maxPort, parsed.Port)
 	}
-	return port, nil
+	if parsed.Dir == "" {
+		return errors.New("--dir must not be empty")
+	}
+	if parsed.Name == "" {
+		return errors.New("--name must not be empty")
+	}
+	return nil
+}
+
+// helpExit is panicked by kong's exit hook so LoadConfig can return instead of
+// the process exiting.
+type helpExit struct{}
+
+// LoadConfig builds a Config from args, environment variables and defaults, in
+// that order of precedence. Usage is written to output. It returns ErrHelp
+// when help was requested.
+func LoadConfig(args []string, output io.Writer) (config Config, err error) {
+	defaults := DefaultConfig()
+
+	var parsed options
+	parser, err := kong.New(&parsed,
+		kong.Name("deckdrop"),
+		kong.Description("Receive files from other devices on your network."),
+		kong.Writers(output, output),
+		kong.Vars{
+			"default_port": fmt.Sprint(defaults.Port),
+			"default_dir":  defaults.ReceiveDir,
+			"default_name": defaults.DeviceName,
+			"max_port":     fmt.Sprint(maxPort),
+		},
+		kong.Exit(func(int) { panic(helpExit{}) }),
+	)
+	if err != nil {
+		return Config{}, fmt.Errorf("build command line: %w", err)
+	}
+
+	defer func() {
+		if recovered := recover(); recovered != nil {
+			if _, isHelp := recovered.(helpExit); !isHelp {
+				panic(recovered)
+			}
+			config, err = Config{}, ErrHelp
+		}
+	}()
+
+	if _, err := parser.Parse(args); err != nil {
+		return Config{}, err
+	}
+
+	defaults.Port = parsed.Port
+	defaults.ReceiveDir = parsed.Dir
+	defaults.DeviceName = parsed.Name
+	return defaults, nil
 }

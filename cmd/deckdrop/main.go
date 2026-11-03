@@ -2,7 +2,6 @@ package main
 
 import (
 	"errors"
-	"flag"
 	"log/slog"
 	"os"
 	"os/signal"
@@ -17,8 +16,8 @@ const usageExitCode = 2
 func main() {
 	logger := slog.New(slog.NewTextHandler(os.Stderr, nil))
 
-	config, err := backend.LoadConfig(os.Args[1:], os.Getenv, os.Stderr)
-	if errors.Is(err, flag.ErrHelp) {
+	config, err := backend.LoadConfig(os.Args[1:], os.Stderr)
+	if errors.Is(err, backend.ErrHelp) {
 		return
 	}
 	if err != nil {
