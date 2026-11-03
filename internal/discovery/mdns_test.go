@@ -84,3 +84,18 @@ func TestCloseIsIdempotent(t *testing.T) {
 		t.Fatalf("second Close: %v", err)
 	}
 }
+
+func TestMDNSAnnouncerAnnouncesInstance(t *testing.T) {
+	const instance = "deckdrop-test-announcer"
+	const port = 45681
+
+	closer, err := MDNS{}.Announce(instance, port)
+	if err != nil {
+		t.Fatalf("Announce: %v", err)
+	}
+	t.Cleanup(func() { _ = closer.Close() })
+
+	if entry := browseForInstance(t, instance); entry == nil || entry.Port != port {
+		t.Fatalf("announced service not discovered correctly: %+v", entry)
+	}
+}
