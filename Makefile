@@ -1,10 +1,15 @@
-.PHONY: build test lint fmt fmt-check
+.PHONY: build app test lint fmt fmt-check
 
+# Builds the headless backend and libraries; the desktop app needs `make app`.
 build:
-	go build ./...
+	go build ./cmd/... ./internal/...
+
+# Builds the desktop app with Wails (see README for prerequisites).
+app:
+	wails build $(WAILS_FLAGS)
 
 test:
-	go test ./...
+	go test ./cmd/... ./internal/...
 
 lint:
 	golangci-lint run

@@ -28,6 +28,30 @@ jobs:
           go-version: stable
       - run: make test
 
+  app:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: stable
+      - uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+      - name: Install Linux build dependencies
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev
+      - run: go install github.com/wailsapp/wails/v2/cmd/wails@v2.17.1
+      - name: Build (Linux)
+        if: runner.os == 'Linux'
+        run: wails build -tags webkit2_41
+      - name: Build (Windows)
+        if: runner.os == 'Windows'
+        run: wails build
+
   lint:
     runs-on: ubuntu-latest
     steps:
@@ -35,6 +59,9 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version: stable
+      - name: Install build dependencies for the desktop app package
+        run: sudo apt-get update && sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev
       - uses: golangci/golangci-lint-action@v8
         with:
           version: latest
+          args: --build-tags webkit2_41

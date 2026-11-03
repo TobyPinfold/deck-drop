@@ -34,3 +34,10 @@ go.work.sum
 
 # Files received by a local run
 received_files/
+
+# Wails
+build/bin/
+node_modules/
+frontend/dist/*
+!frontend/dist/gitkeep
+frontend/package.json.md5
