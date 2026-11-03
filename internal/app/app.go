@@ -25,6 +25,7 @@ type App struct {
 	devices   []discovery.Device
 	transfers []Transfer
 	sending   bool
+	cancels   map[int]context.CancelFunc
 
 	sendContext context.Context
 	stopSending context.CancelFunc
@@ -51,6 +52,13 @@ type Options struct {
 	// OnTransfersChanged is called whenever a transfer is added or changes
 	// status.
 	OnTransfersChanged func([]Transfer)
+
+	// ProgressInterval is the shortest time between progress updates for one
+	// transfer. Zero reports every update.
+	ProgressInterval time.Duration
+
+	// Now returns the current time. It defaults to time.Now.
+	Now func() time.Time
 }
 
 // Info describes the embedded backend for the frontend.
@@ -70,6 +78,7 @@ func New(logger *slog.Logger, config backend.Config, options Options) *App {
 		selfName:    discovery.InstanceName(config.DeviceName),
 		sendContext: sendContext,
 		stopSending: stopSending,
+		cancels:     make(map[int]context.CancelFunc),
 	}
 }
 
