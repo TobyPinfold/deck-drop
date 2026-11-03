@@ -156,3 +156,49 @@ func TestWriteChunkRejectsNegativeOffset(t *testing.T) {
 		t.Fatalf("error = %v, want ErrInvalidOffset", err)
 	}
 }
+
+func TestSizeOfUnknownFileIsZero(t *testing.T) {
+	receiver, _ := newTestReceiver(t)
+
+	size, err := receiver.Size("never-sent.bin")
+
+	if err != nil || size != 0 {
+		t.Fatalf("Size = %d, %v; want 0, nil", size, err)
+	}
+}
+
+func TestSizeReportsBytesReceived(t *testing.T) {
+	receiver, _ := newTestReceiver(t)
+	content := randomContent(t, 700)
+	writeChunk(t, receiver, "partial.bin", 0, content[:300])
+
+	size, err := receiver.Size("partial.bin")
+
+	if err != nil || size != 300 {
+		t.Fatalf("Size = %d, %v; want 300, nil", size, err)
+	}
+}
+
+func TestSizeRejectsInvalidNames(t *testing.T) {
+	receiver, _ := newTestReceiver(t)
+
+	_, err := receiver.Size("../secret.bin")
+
+	if !errors.Is(err, ErrInvalidName) {
+		t.Fatalf("error = %v, want ErrInvalidName", err)
+	}
+}
+
+func TestResumingFromReportedSizeCompletesFile(t *testing.T) {
+	receiver, directory := newTestReceiver(t)
+	content := randomContent(t, 1000)
+	writeChunk(t, receiver, "resumed.bin", 0, content[:450])
+
+	resumeOffset, err := receiver.Size("resumed.bin")
+	if err != nil {
+		t.Fatalf("Size: %v", err)
+	}
+	writeChunk(t, receiver, "resumed.bin", int(resumeOffset), content[resumeOffset:])
+
+	assertFileContent(t, directory, "resumed.bin", content)
+}
