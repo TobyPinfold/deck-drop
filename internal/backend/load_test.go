@@ -19,7 +19,7 @@ func loadConfig(t *testing.T, args []string, environment map[string]string) (Con
 	for name, value := range environment {
 		t.Setenv(name, value)
 	}
-	return LoadConfig(args, &bytes.Buffer{})
+	return LoadConfig(DefaultConfig(), args, &bytes.Buffer{})
 }
 
 func TestLoadConfigDefaultsWorkWithNoConfiguration(t *testing.T) {
@@ -107,7 +107,7 @@ func TestLoadConfigRejectsInvalidValues(t *testing.T) {
 func TestLoadConfigHelpFlagReturnsErrHelpAndPrintsUsage(t *testing.T) {
 	var output bytes.Buffer
 
-	_, err := LoadConfig([]string{"--help"}, &output)
+	_, err := LoadConfig(DefaultConfig(), []string{"--help"}, &output)
 
 	if !errors.Is(err, ErrHelp) {
 		t.Fatalf("error = %v, want ErrHelp", err)
@@ -116,5 +116,33 @@ func TestLoadConfigHelpFlagReturnsErrHelpAndPrintsUsage(t *testing.T) {
 		if !bytes.Contains(output.Bytes(), []byte(want)) {
 			t.Errorf("usage does not mention %q:\n%s", want, output.String())
 		}
+	}
+}
+
+func TestLoadConfigHeadlessFlag(t *testing.T) {
+	config, err := loadConfig(t, []string{"--headless"}, nil)
+
+	if err != nil {
+		t.Fatalf("LoadConfig: %v", err)
+	}
+	if !config.Headless {
+		t.Error("Headless = false, want true with --headless")
+	}
+	if defaultConfig, err := loadConfig(t, nil, nil); err != nil || defaultConfig.Headless {
+		t.Errorf("Headless without the flag = %v (err %v), want false", defaultConfig.Headless, err)
+	}
+}
+
+func TestLoadConfigUsesTheDefaultsItIsGiven(t *testing.T) {
+	defaults := DefaultConfig()
+	defaults.ReceiveDir = "/home/user/Downloads/DeckDrop"
+
+	config, err := LoadConfig(defaults, []string{"--port", "9000"}, &bytes.Buffer{})
+
+	if err != nil {
+		t.Fatalf("LoadConfig: %v", err)
+	}
+	if config.ReceiveDir != defaults.ReceiveDir || config.Port != 9000 {
+		t.Errorf("config = %+v, want default dir %q and port 9000", config, defaults.ReceiveDir)
 	}
 }

@@ -27,6 +27,9 @@ type Config struct {
 	// DeviceName is how this device appears to others on the network.
 	DeviceName string
 
+	// Headless runs without the desktop window.
+	Headless bool
+
 	// Announcer advertises the device on the network. Nil disables announcing.
 	Announcer Announcer
 }

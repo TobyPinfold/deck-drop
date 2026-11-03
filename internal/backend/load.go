@@ -26,6 +26,8 @@ type options struct {
 	Port int    `help:"TCP port to listen on (1-${max_port})." env:"DECKDROP_PORT" default:"${default_port}"`
 	Dir  string `help:"Directory received files are saved to." env:"DECKDROP_RECEIVE_DIR" default:"${default_dir}"`
 	Name string `help:"Device name shown to other devices." env:"DECKDROP_DEVICE_NAME" default:"${default_name}"`
+
+	Headless bool `help:"Run without the desktop window, only receiving files."`
 }
 
 // Validate is called by kong after parsing.
@@ -47,11 +49,10 @@ func (parsed *options) Validate() error {
 type helpExit struct{}
 
 // LoadConfig builds a Config from args, environment variables and defaults, in
-// that order of precedence. Usage is written to output. It returns ErrHelp
+// that order of precedence. Settings that are not configurable are taken from
+// defaults. Usage is written to output. It returns ErrHelp
 // when help was requested.
-func LoadConfig(args []string, output io.Writer) (config Config, err error) {
-	defaults := DefaultConfig()
-
+func LoadConfig(defaults Config, args []string, output io.Writer) (config Config, err error) {
 	var parsed options
 	parser, err := kong.New(&parsed,
 		kong.Name("deckdrop"),
@@ -85,5 +86,6 @@ func LoadConfig(args []string, output io.Writer) (config Config, err error) {
 	defaults.Port = parsed.Port
 	defaults.ReceiveDir = parsed.Dir
 	defaults.DeviceName = parsed.Name
+	defaults.Headless = parsed.Headless
 	return defaults, nil
 }

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"log/slog"
 	"os"
@@ -16,7 +17,7 @@ const usageExitCode = 2
 func main() {
 	logger := slog.New(slog.NewTextHandler(os.Stderr, nil))
 
-	config, err := backend.LoadConfig(os.Args[1:], os.Stderr)
+	config, err := backend.LoadConfig(backend.DefaultConfig(), os.Args[1:], os.Stderr)
 	if errors.Is(err, backend.ErrHelp) {
 		return
 	}
@@ -25,19 +26,12 @@ func main() {
 		os.Exit(usageExitCode)
 	}
 	config.Announcer = discovery.MDNS{}
-	backendService := backend.New(logger, config)
 
-	if err := backendService.Start(); err != nil {
-		logger.Error("failed to start backend", "error", err)
-		os.Exit(1)
-	}
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
 
-	shutdownSignals := make(chan os.Signal, 1)
-	signal.Notify(shutdownSignals, os.Interrupt, syscall.SIGTERM)
-	<-shutdownSignals
-
-	if err := backendService.Stop(); err != nil {
-		logger.Error("failed to stop backend", "error", err)
+	if err := backend.Serve(ctx, logger, config); err != nil {
+		logger.Error("backend failed", "error", err)
 		os.Exit(1)
 	}
 }
