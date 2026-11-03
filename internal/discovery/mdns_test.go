@@ -99,3 +99,17 @@ func TestMDNSAnnouncerAnnouncesInstance(t *testing.T) {
 		t.Fatalf("announced service not discovered correctly: %+v", entry)
 	}
 }
+
+func TestAnnounceMakesDottedInstanceNameDiscoverable(t *testing.T) {
+	const port = 45682
+
+	registration, err := Announce("my.deck.local", port)
+	if err != nil {
+		t.Fatalf("Announce: %v", err)
+	}
+	t.Cleanup(func() { _ = registration.Close() })
+
+	if entry := browseForInstance(t, "my-deck-local"); entry == nil {
+		t.Fatal("dotted instance name should be announced with dots replaced")
+	}
+}

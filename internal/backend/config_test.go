@@ -17,3 +17,17 @@ func TestDefaultConfigHasDeviceName(t *testing.T) {
 		t.Fatal("default device name should not be empty")
 	}
 }
+
+func TestShortHostnameDropsDomain(t *testing.T) {
+	tests := map[string]string{
+		"steamdeck":       "steamdeck",
+		"my-laptop.local": "my-laptop",
+		"pc.example.com":  "pc",
+	}
+
+	for hostname, want := range tests {
+		if got := shortHostname(hostname); got != want {
+			t.Errorf("shortHostname(%q) = %q, want %q", hostname, got, want)
+		}
+	}
+}
