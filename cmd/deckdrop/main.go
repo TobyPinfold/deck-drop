@@ -1,6 +1,8 @@
 package main
 
 import (
+	"errors"
+	"flag"
 	"log/slog"
 	"os"
 	"os/signal"
@@ -10,10 +12,19 @@ import (
 	"github.com/TobyPinfold/deck-drop/internal/discovery"
 )
 
+const usageExitCode = 2
+
 func main() {
 	logger := slog.New(slog.NewTextHandler(os.Stderr, nil))
 
-	config := backend.DefaultConfig()
+	config, err := backend.LoadConfig(os.Args[1:], os.Getenv, os.Stderr)
+	if errors.Is(err, flag.ErrHelp) {
+		return
+	}
+	if err != nil {
+		logger.Error("invalid configuration", "error", err)
+		os.Exit(usageExitCode)
+	}
 	config.Announcer = discovery.MDNS{}
 	backendService := backend.New(logger, config)
 
