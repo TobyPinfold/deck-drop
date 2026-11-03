@@ -1,6 +1,8 @@
 import './style.css';
 import {Events} from '@wailsio/runtime';
-import {ChooseFiles, Devices, Info, PauseTransfer, ResumeTransfer, SendFiles, Transfers} from '../bindings/github.com/TobyPinfold/deck-drop/service.js';
+import {
+    ChooseFiles, Devices, Info, OpenReceiveFolder, PauseTransfer, ReceiveDir, ReceivedFiles, ResumeTransfer, SendFiles, Transfers,
+} from '../bindings/github.com/TobyPinfold/deck-drop/service.js';
 
 const status = document.querySelector('#status');
 const deviceList = document.querySelector('#devices');
@@ -8,6 +10,12 @@ const emptyMessage = document.querySelector('#empty');
 const chooseButton = document.querySelector('#choose');
 const hint = document.querySelector('#hint');
 const transferList = document.querySelector('#transfers');
+const openFolderButton = document.querySelector('#open-folder');
+const receiveDirLabel = document.querySelector('#receive-dir');
+const receivedList = document.querySelector('#received');
+const receivedEmpty = document.querySelector('#received-empty');
+
+const receivedRefreshMs = 2000;
 
 let selectedName = null;
 
@@ -157,3 +165,43 @@ Events.On('transfers', (event) => renderTransfers(event.data ?? []));
 Events.On('files-dropped', (event) => sendFiles(event.data));
 Devices().then((devices) => renderDevices(devices ?? []));
 Transfers().then((transfers) => renderTransfers(transfers ?? []));
+
+let lastReceived = '';
+
+function renderReceived(files) {
+    // Skip rebuilding when nothing changed, as this runs on a timer.
+    const snapshot = JSON.stringify(files);
+    if (snapshot === lastReceived) {
+        return;
+    }
+    lastReceived = snapshot;
+
+    receivedList.replaceChildren(...files.map((file) => {
+        const item = document.createElement('li');
+        item.className = 'received-file';
+        const name = document.createElement('span');
+        name.textContent = file.name;
+        const detail = document.createElement('span');
+        detail.className = 'transfer-detail';
+        detail.textContent = `${formatBytes(file.size)} · ${new Date(file.modified).toLocaleString()}`;
+        item.append(name, detail);
+        return item;
+    }));
+    receivedEmpty.hidden = files.length > 0;
+}
+
+function refreshReceived() {
+    ReceivedFiles().then((files) => renderReceived(files ?? []), () => {});
+}
+
+openFolderButton.addEventListener('click', () => {
+    OpenReceiveFolder().catch((error) => {
+        receiveDirLabel.textContent = `Could not open the folder: ${error.message ?? error}`;
+    });
+});
+
+ReceiveDir().then((directory) => {
+    receiveDirLabel.textContent = directory;
+});
+refreshReceived();
+setInterval(refreshReceived, receivedRefreshMs);

@@ -3,5 +3,6 @@
 
 export type {
     Info,
+    ReceivedFile,
     Transfer
 } from "./models.js";

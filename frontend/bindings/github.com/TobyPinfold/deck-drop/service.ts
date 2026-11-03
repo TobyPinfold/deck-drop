@@ -41,10 +41,31 @@ export function Info(): $CancellablePromise<app$0.Info> {
 }
 
 /**
+ * OpenReceiveFolder shows the receive folder in the system file manager.
+ */
+export function OpenReceiveFolder(): $CancellablePromise<void> {
+    return $Call.ByID(1532415790);
+}
+
+/**
  * PauseTransfer stops a queued or in-flight transfer.
  */
 export function PauseTransfer(id: number): $CancellablePromise<void> {
     return $Call.ByID(1001523790, id);
+}
+
+/**
+ * ReceiveDir is the folder received files are saved to.
+ */
+export function ReceiveDir(): $CancellablePromise<string> {
+    return $Call.ByID(1295476153);
+}
+
+/**
+ * ReceivedFiles lists the files that have been received, newest first.
+ */
+export function ReceivedFiles(): $CancellablePromise<app$0.ReceivedFile[] | null> {
+    return $Call.ByID(1167929493);
 }
 
 /**
