@@ -1,6 +1,9 @@
 package backend
 
-import "os"
+import (
+	"os"
+	"strings"
+)
 
 const (
 	defaultPort        = 8080
@@ -22,9 +25,16 @@ type Config struct {
 // DefaultConfig returns the configuration used when nothing is overridden.
 // The device name defaults to the machine's hostname.
 func DefaultConfig() Config {
-	deviceName, err := os.Hostname()
+	hostname, err := os.Hostname()
+	deviceName := shortHostname(hostname)
 	if err != nil || deviceName == "" {
 		deviceName = fallbackDeviceName
 	}
 	return Config{Port: defaultPort, DeviceName: deviceName}
+}
+
+// shortHostname drops the domain part, e.g. "deck.local" becomes "deck".
+func shortHostname(hostname string) string {
+	shortName, _, _ := strings.Cut(hostname, ".")
+	return shortName
 }
