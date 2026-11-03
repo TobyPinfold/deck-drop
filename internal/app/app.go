@@ -5,6 +5,7 @@ package app
 import (
 	"context"
 	"log/slog"
+	"path/filepath"
 
 	"github.com/TobyPinfold/deck-drop/internal/backend"
 )
@@ -52,4 +53,11 @@ func (app *App) Info() Info {
 		Port:    app.backend.Port(),
 		Error:   app.startError,
 	}
+}
+
+// DefaultReceiveDir is where the desktop app saves files. A relative path
+// would resolve against the working directory, which is "/" when the app is
+// launched from a desktop launcher.
+func DefaultReceiveDir(homeDir string) string {
+	return filepath.Join(homeDir, "Downloads", "DeckDrop")
 }

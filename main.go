@@ -42,6 +42,9 @@ func main() {
 
 	config := backend.DefaultConfig()
 	config.Announcer = discovery.MDNS{}
+	if homeDir, err := os.UserHomeDir(); err == nil {
+		config.ReceiveDir = app.DefaultReceiveDir(homeDir)
+	}
 
 	desktop := application.New(application.Options{
 		Name:        "DeckDrop",

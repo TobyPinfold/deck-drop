@@ -5,6 +5,7 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"path/filepath"
 	"testing"
 
 	"github.com/TobyPinfold/deck-drop/internal/backend"
@@ -53,5 +54,14 @@ func TestStartupReportsAFailureToStartTheBackend(t *testing.T) {
 	}
 	if second.Info().Error == "" {
 		t.Fatal("Info.Error should explain why the backend failed to start")
+	}
+}
+
+func TestDefaultReceiveDirIsInsideTheHomeDownloads(t *testing.T) {
+	got := DefaultReceiveDir("/home/deck")
+
+	want := filepath.Join("/home/deck", "Downloads", "DeckDrop")
+	if got != want {
+		t.Fatalf("DefaultReceiveDir = %q, want %q", got, want)
 	}
 }
