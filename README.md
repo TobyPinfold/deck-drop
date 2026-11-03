@@ -41,6 +41,10 @@ make lint                             # run the linter
 
 The backend listens on port 8080, saves received files to `./received_files`, and announces itself on the local network as `_deckdrop._tcp` via mDNS so other devices can find it. Stop it with Ctrl+C.
 
+## Go packages
+
+The root package wires the Wails desktop application; `cmd/deckdrop` is the headless entry point. `internal/app` is the desktop-facing facade. `internal/backend` owns the receiving server lifecycle, with HTTP routes in `internal/backend/httpapi` and command-line/environment parsing in `internal/backend/config`. Discovery, sending, settings, and received-file history live in their respective `internal` packages.
+
 ## HTTP API
 
 Files are sent in chunks so interrupted transfers can resume.

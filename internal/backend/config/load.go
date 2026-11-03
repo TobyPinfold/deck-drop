@@ -1,4 +1,5 @@
-package backend
+// Package config parses backend command-line arguments and environment variables.
+package config
 
 import (
 	"errors"
@@ -6,6 +7,8 @@ import (
 	"io"
 
 	"github.com/alecthomas/kong"
+
+	"github.com/TobyPinfold/deck-drop/internal/backend"
 )
 
 const (
@@ -52,7 +55,7 @@ type helpExit struct{}
 // that order of precedence. Settings that are not configurable are taken from
 // defaults. Usage is written to output. It returns ErrHelp
 // when help was requested.
-func LoadConfig(defaults Config, args []string, output io.Writer) (config Config, err error) {
+func LoadConfig(defaults backend.Config, args []string, output io.Writer) (config backend.Config, err error) {
 	var parsed options
 	parser, err := kong.New(&parsed,
 		kong.Name("deckdrop"),
@@ -67,7 +70,7 @@ func LoadConfig(defaults Config, args []string, output io.Writer) (config Config
 		kong.Exit(func(int) { panic(helpExit{}) }),
 	)
 	if err != nil {
-		return Config{}, fmt.Errorf("build command line: %w", err)
+		return backend.Config{}, fmt.Errorf("build command line: %w", err)
 	}
 
 	defer func() {
@@ -75,12 +78,12 @@ func LoadConfig(defaults Config, args []string, output io.Writer) (config Config
 			if _, isHelp := recovered.(helpExit); !isHelp {
 				panic(recovered)
 			}
-			config, err = Config{}, ErrHelp
+			config, err = backend.Config{}, ErrHelp
 		}
 	}()
 
 	if _, err := parser.Parse(args); err != nil {
-		return Config{}, err
+		return backend.Config{}, err
 	}
 
 	defaults.Port = parsed.Port

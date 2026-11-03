@@ -1,13 +1,15 @@
-package backend
+package config
 
 import (
 	"bytes"
 	"errors"
 	"os"
 	"testing"
+
+	"github.com/TobyPinfold/deck-drop/internal/backend"
 )
 
-func loadConfig(t *testing.T, args []string, environment map[string]string) (Config, error) {
+func loadConfig(t *testing.T, args []string, environment map[string]string) (backend.Config, error) {
 	t.Helper()
 
 	for _, name := range []string{portEnvironmentVariable, receiveDirEnvironmentVariable, deviceNameEnvironmentVariable} {
@@ -19,7 +21,7 @@ func loadConfig(t *testing.T, args []string, environment map[string]string) (Con
 	for name, value := range environment {
 		t.Setenv(name, value)
 	}
-	return LoadConfig(DefaultConfig(), args, &bytes.Buffer{})
+	return LoadConfig(backend.DefaultConfig(), args, &bytes.Buffer{})
 }
 
 func TestLoadConfigDefaultsWorkWithNoConfiguration(t *testing.T) {
@@ -28,8 +30,8 @@ func TestLoadConfigDefaultsWorkWithNoConfiguration(t *testing.T) {
 	if err != nil {
 		t.Fatalf("LoadConfig: %v", err)
 	}
-	if config != DefaultConfig() {
-		t.Fatalf("config = %+v, want defaults %+v", config, DefaultConfig())
+	if config != backend.DefaultConfig() {
+		t.Fatalf("config = %+v, want defaults %+v", config, backend.DefaultConfig())
 	}
 }
 
@@ -107,7 +109,7 @@ func TestLoadConfigRejectsInvalidValues(t *testing.T) {
 func TestLoadConfigHelpFlagReturnsErrHelpAndPrintsUsage(t *testing.T) {
 	var output bytes.Buffer
 
-	_, err := LoadConfig(DefaultConfig(), []string{"--help"}, &output)
+	_, err := LoadConfig(backend.DefaultConfig(), []string{"--help"}, &output)
 
 	if !errors.Is(err, ErrHelp) {
 		t.Fatalf("error = %v, want ErrHelp", err)
@@ -134,7 +136,7 @@ func TestLoadConfigHeadlessFlag(t *testing.T) {
 }
 
 func TestLoadConfigUsesTheDefaultsItIsGiven(t *testing.T) {
-	defaults := DefaultConfig()
+	defaults := backend.DefaultConfig()
 	defaults.ReceiveDir = "/home/user/Downloads/DeckDrop"
 
 	config, err := LoadConfig(defaults, []string{"--port", "9000"}, &bytes.Buffer{})

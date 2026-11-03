@@ -18,9 +18,9 @@ func statusRequest(t *testing.T, testBackend *Backend, method, name string) *htt
 func receivedOffset(t *testing.T, response *http.Response) int {
 	t.Helper()
 
-	offset, err := strconv.Atoi(response.Header.Get(fileOffsetHeader))
+	offset, err := strconv.Atoi(response.Header.Get("X-File-Offset"))
 	if err != nil {
-		t.Fatalf("invalid %s header %q: %v", fileOffsetHeader, response.Header.Get(fileOffsetHeader), err)
+		t.Fatalf("invalid %s header %q: %v", "X-File-Offset", response.Header.Get("X-File-Offset"), err)
 	}
 	return offset
 }
@@ -56,7 +56,7 @@ func TestStatusSupportsHeadRequests(t *testing.T) {
 	response := statusRequest(t, testBackend, http.MethodHead, "partial.bin")
 
 	if response.StatusCode != http.StatusOK || receivedOffset(t, response) != 250 {
-		t.Fatalf("status = %d, offset header = %q", response.StatusCode, response.Header.Get(fileOffsetHeader))
+		t.Fatalf("status = %d, offset header = %q", response.StatusCode, response.Header.Get("X-File-Offset"))
 	}
 }
 
