@@ -6,9 +6,10 @@ import (
 )
 
 const (
-	defaultPort        = 8080
-	defaultReceiveDir  = "received_files"
-	fallbackDeviceName = "deckdrop"
+	defaultPort         = 8080
+	defaultReceiveDir   = "received_files"
+	defaultMaxChunkSize = 64 << 20 // 64 MiB
+	fallbackDeviceName  = "deckdrop"
 )
 
 // Config holds the settings for the backend.
@@ -19,11 +20,22 @@ type Config struct {
 	// ReceiveDir is the directory received files are written to.
 	ReceiveDir string
 
+	// MaxChunkSize is the largest accepted upload body in bytes. Zero uses the
+	// default.
+	MaxChunkSize int64
+
 	// DeviceName is how this device appears to others on the network.
 	DeviceName string
 
 	// Announcer advertises the device on the network. Nil disables announcing.
 	Announcer Announcer
+}
+
+func (config Config) maxChunkSize() int64 {
+	if config.MaxChunkSize <= 0 {
+		return defaultMaxChunkSize
+	}
+	return config.MaxChunkSize
 }
 
 // DefaultConfig returns the configuration used when nothing is overridden.
@@ -34,7 +46,7 @@ func DefaultConfig() Config {
 	if err != nil || deviceName == "" {
 		deviceName = fallbackDeviceName
 	}
-	return Config{Port: defaultPort, ReceiveDir: defaultReceiveDir, DeviceName: deviceName}
+	return Config{Port: defaultPort, ReceiveDir: defaultReceiveDir, MaxChunkSize: defaultMaxChunkSize, DeviceName: deviceName}
 }
 
 // shortHostname drops the domain part, e.g. "deck.local" becomes "deck".

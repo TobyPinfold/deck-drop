@@ -17,6 +17,8 @@ const (
 type uploadHandler struct {
 	receiver *transfer.Receiver
 	log      *slog.Logger
+
+	maxChunkSize int64
 }
 
 // ServeHTTP writes the request body into the named file at the given offset.
@@ -28,7 +30,13 @@ func (handler uploadHandler) ServeHTTP(writer http.ResponseWriter, request *http
 		return
 	}
 
-	if _, err := handler.receiver.WriteChunk(name, offset, request.Body); err != nil {
+	if request.ContentLength > handler.maxChunkSize {
+		http.Error(writer, "chunk too large", http.StatusRequestEntityTooLarge)
+		return
+	}
+	body := http.MaxBytesReader(writer, request.Body, handler.maxChunkSize)
+
+	if _, err := handler.receiver.WriteChunk(name, offset, body); err != nil {
 		handler.writeError(writer, name, err)
 		return
 	}
@@ -36,6 +44,12 @@ func (handler uploadHandler) ServeHTTP(writer http.ResponseWriter, request *http
 }
 
 func (handler uploadHandler) writeError(writer http.ResponseWriter, name string, err error) {
+	var tooLarge *http.MaxBytesError
+	if errors.As(err, &tooLarge) {
+		http.Error(writer, "chunk too large", http.StatusRequestEntityTooLarge)
+		return
+	}
+
 	if errors.Is(err, transfer.ErrInvalidName) || errors.Is(err, transfer.ErrInvalidOffset) {
 		http.Error(writer, err.Error(), http.StatusBadRequest)
 		return
