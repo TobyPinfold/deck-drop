@@ -3,11 +3,13 @@ package backend
 import (
 	"bytes"
 	"crypto/rand"
+	"fmt"
 	"io"
 	"net/http"
 	"os"
 	"path/filepath"
 	"strconv"
+	"sync"
 	"testing"
 )
 
@@ -216,5 +218,96 @@ func TestStreamedUploadOverMaxChunkSizeIsRejected(t *testing.T) {
 
 	if response.StatusCode != http.StatusRequestEntityTooLarge {
 		t.Fatalf("status = %d, want %d", response.StatusCode, http.StatusRequestEntityTooLarge)
+	}
+}
+
+func TestLargeFileUploadedInManyChunksIsIdentical(t *testing.T) {
+	const chunkSize = 64 * 1024
+	testBackend := startTestBackend(t)
+	content := randomBytes(t, 5*1024*1024+123)
+
+	for offset := 0; offset < len(content); offset += chunkSize {
+		uploadChunk(t, testBackend, "large.bin", offset, content[offset:min(offset+chunkSize, len(content))])
+	}
+
+	if !bytes.Equal(receivedFile(t, testBackend, "large.bin"), content) {
+		t.Fatal("large file differs from the uploaded content")
+	}
+}
+
+func TestConcurrentChunkUploadsProduceIdenticalFiles(t *testing.T) {
+	const (
+		fileCount     = 4
+		chunksPerFile = 8
+		chunkSize     = 4096
+	)
+	testBackend := startTestBackend(t)
+	contents := make([][]byte, fileCount)
+	for file := range contents {
+		contents[file] = randomBytes(t, chunksPerFile*chunkSize)
+	}
+
+	var uploads sync.WaitGroup
+	for file := range contents {
+		for chunk := range chunksPerFile {
+			uploads.Add(1)
+			go func() {
+				defer uploads.Done()
+				offset := chunk * chunkSize
+				uploadChunk(t, testBackend, fmt.Sprintf("file-%d.bin", file), offset, contents[file][offset:offset+chunkSize])
+			}()
+		}
+	}
+	uploads.Wait()
+
+	for file, content := range contents {
+		if !bytes.Equal(receivedFile(t, testBackend, fmt.Sprintf("file-%d.bin", file)), content) {
+			t.Errorf("file-%d.bin differs from the uploaded content", file)
+		}
+	}
+}
+
+func TestUploadCanResumeAfterBackendRestart(t *testing.T) {
+	receiveDir := t.TempDir()
+	content := randomBytes(t, 2000)
+
+	startBackend := func() *Backend {
+		testBackend := newTestBackend(t, &bytes.Buffer{})
+		testBackend.config.ReceiveDir = receiveDir
+		if err := testBackend.Start(); err != nil {
+			t.Fatalf("Start: %v", err)
+		}
+		t.Cleanup(func() { _ = testBackend.Stop() })
+		return testBackend
+	}
+
+	firstRun := startBackend()
+	uploadChunk(t, firstRun, "interrupted.bin", 0, content[:1200])
+	if err := firstRun.Stop(); err != nil {
+		t.Fatalf("Stop: %v", err)
+	}
+
+	secondRun := startBackend()
+	resumeOffset := receivedOffset(t, statusRequest(t, secondRun, http.MethodGet, "interrupted.bin"))
+	uploadChunk(t, secondRun, "interrupted.bin", resumeOffset, content[resumeOffset:])
+
+	if resumeOffset != 1200 {
+		t.Fatalf("resume offset = %d, want 1200", resumeOffset)
+	}
+	if !bytes.Equal(receivedFile(t, secondRun, "interrupted.bin"), content) {
+		t.Fatal("resumed file differs from the original content")
+	}
+}
+
+func TestUploadFailsWhenTargetIsADirectory(t *testing.T) {
+	testBackend := startTestBackend(t)
+	if err := os.Mkdir(filepath.Join(testBackend.config.ReceiveDir, "taken"), 0o755); err != nil {
+		t.Fatalf("Mkdir: %v", err)
+	}
+
+	response := postChunk(t, testBackend, "taken", "0", []byte("data"))
+
+	if response.StatusCode != http.StatusInternalServerError {
+		t.Fatalf("status = %d, want %d", response.StatusCode, http.StatusInternalServerError)
 	}
 }
