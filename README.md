@@ -26,6 +26,10 @@ bin/deckdrop --headless --port 8099 --name other-deck --dir /tmp/dd-test
 bin/deckdrop    # select "other-deck", then choose or drop a file
 ```
 
+## Releases
+
+Pushing a tag such as `v0.1.0` runs the Release workflow, which builds a Linux AppImage (Steam Deck), a Windows installer and a macOS app bundle (zipped, Apple Silicon) and attaches them to a GitHub release. The macOS and Windows builds are unsigned, so macOS needs right-click → Open the first time and Windows may show a SmartScreen warning. The workflow also runs on pull requests that change `build/` so packaging problems are caught early.
+
 ## Headless backend
 
 ```sh
