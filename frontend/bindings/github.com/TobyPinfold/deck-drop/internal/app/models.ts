@@ -9,3 +9,14 @@ export interface Info {
     "port": number;
     "error": string;
 }
+
+/**
+ * Transfer is one file queued to be sent to a device.
+ */
+export interface Transfer {
+    "id": number;
+    "name": string;
+    "device": string;
+    "status": string;
+    "error": string;
+}

@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"sync"
 	"testing"
 )
@@ -309,5 +310,23 @@ func TestUploadFailsWhenTargetIsADirectory(t *testing.T) {
 
 	if response.StatusCode != http.StatusInternalServerError {
 		t.Fatalf("status = %d, want %d", response.StatusCode, http.StatusInternalServerError)
+	}
+}
+
+func TestUploadLogsWhereTheFileIsSaved(t *testing.T) {
+	var logBuffer bytes.Buffer
+	testBackend := newTestBackend(t, &logBuffer)
+	if err := testBackend.Start(); err != nil {
+		t.Fatalf("Start: %v", err)
+	}
+	t.Cleanup(func() { _ = testBackend.Stop() })
+
+	uploadChunk(t, testBackend, "photo.jpg", 0, []byte("abc"))
+	uploadChunk(t, testBackend, "photo.jpg", 3, []byte("def"))
+
+	logs := logBuffer.String()
+	want := filepath.Join(testBackend.config.ReceiveDir, "photo.jpg")
+	if strings.Count(logs, "receiving file") != 1 || !strings.Contains(logs, want) {
+		t.Errorf("logs = %q, want one \"receiving file\" entry mentioning %q", logs, want)
 	}
 }

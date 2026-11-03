@@ -21,8 +21,14 @@ type App struct {
 	selfName   string
 	startError string
 
-	mu      sync.Mutex
-	devices []discovery.Device
+	mu        sync.Mutex
+	devices   []discovery.Device
+	transfers []Transfer
+	sending   bool
+
+	sendContext context.Context
+	stopSending context.CancelFunc
+	sendersDone sync.WaitGroup
 
 	stopDiscovery context.CancelFunc
 	discoveryDone chan struct{}
@@ -38,6 +44,13 @@ type Options struct {
 
 	// OnDevicesChanged is called when the list of other devices changes.
 	OnDevicesChanged func([]discovery.Device)
+
+	// Sender uploads files to other devices. Without one, sending is disabled.
+	Sender Sender
+
+	// OnTransfersChanged is called whenever a transfer is added or changes
+	// status.
+	OnTransfersChanged func([]Transfer)
 }
 
 // Info describes the embedded backend for the frontend.
@@ -49,11 +62,14 @@ type Info struct {
 
 // New returns an App that will run a backend with config.
 func New(logger *slog.Logger, config backend.Config, options Options) *App {
+	sendContext, stopSending := context.WithCancel(context.Background())
 	return &App{
-		log:      logger,
-		backend:  backend.New(logger, config),
-		options:  options,
-		selfName: discovery.InstanceName(config.DeviceName),
+		log:         logger,
+		backend:     backend.New(logger, config),
+		options:     options,
+		selfName:    discovery.InstanceName(config.DeviceName),
+		sendContext: sendContext,
+		stopSending: stopSending,
 	}
 }
 
@@ -67,9 +83,11 @@ func (app *App) Startup(_ context.Context) {
 	app.startDiscovery()
 }
 
-// Shutdown stops device discovery and the backend.
+// Shutdown stops device discovery, in-flight sends and the backend.
 func (app *App) Shutdown(_ context.Context) {
 	app.stopDiscoveryAndWait()
+	app.stopSending()
+	app.sendersDone.Wait()
 	if err := app.backend.Stop(); err != nil {
 		app.log.Error("failed to stop backend", "error", err)
 	}

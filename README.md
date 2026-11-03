@@ -17,6 +17,15 @@ wails3 dev    # run with live reload
 make app      # build the app into bin/
 ```
 
+The desktop app accepts the same flags and environment variables as the headless backend (see [Configuration](#configuration)), and its received files default to `~/Downloads/DeckDrop`. Add `--headless` to run the same binary without a window.
+
+To try sending a file with two instances on one machine, run one headless and one with the window, using different ports and names:
+
+```sh
+bin/deckdrop --headless --port 8099 --name other-deck --dir /tmp/dd-test
+bin/deckdrop    # select "other-deck", then choose or drop a file
+```
+
 ## Headless backend
 
 ```sh
@@ -56,6 +65,7 @@ DeckDrop works with no configuration. Settings can be overridden with environmen
 | `--port` | `DECKDROP_PORT`        | `8080`           | TCP port to listen on (1-65535)          |
 | `--dir`  | `DECKDROP_RECEIVE_DIR` | `received_files` | Directory received files are saved to    |
 | `--name` | `DECKDROP_DEVICE_NAME` | machine hostname | Device name shown to other devices       |
+| `--headless` |                    | off              | Run without the desktop window (desktop binary only) |
 
 ```sh
 deckdrop --port 9000 --name steam-deck

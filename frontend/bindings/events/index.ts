@@ -13,3 +13,13 @@ import "../github.com/wailsapp/wails/v3/internal/eventcreate.js";
  */
 export const Devices = "devices";
 
+/**
+ * Name of the custom event "files-dropped".
+ */
+export const FilesDropped = "files-dropped";
+
+/**
+ * Name of the custom event "transfers".
+ */
+export const Transfers = "transfers";
+
