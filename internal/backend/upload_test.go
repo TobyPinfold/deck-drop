@@ -3,6 +3,7 @@ package backend
 import (
 	"bytes"
 	"crypto/rand"
+	"io"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -186,5 +187,34 @@ func TestDefaultMaxChunkSizeAppliesWhenNotConfigured(t *testing.T) {
 
 	if config.maxChunkSize() != defaultMaxChunkSize {
 		t.Fatalf("maxChunkSize = %d, want %d", config.maxChunkSize(), defaultMaxChunkSize)
+	}
+}
+
+func TestStreamedUploadOverMaxChunkSizeIsRejected(t *testing.T) {
+	testBackend := newTestBackend(t, &bytes.Buffer{})
+	testBackend.config.MaxChunkSize = 100
+	if err := testBackend.Start(); err != nil {
+		t.Fatalf("Start: %v", err)
+	}
+	t.Cleanup(func() { _ = testBackend.Stop() })
+
+	// Hiding the reader's length makes the client send a chunked body with no
+	// Content-Length, so the size can only be enforced while reading.
+	body := io.NopCloser(bytes.NewReader(randomBytes(t, 500)))
+	request, err := http.NewRequest(http.MethodPost, "http://"+testBackend.Addr()+"/upload", body)
+	if err != nil {
+		t.Fatalf("NewRequest: %v", err)
+	}
+	request.Header.Set(fileNameHeader, "streamed.bin")
+	request.Header.Set(fileOffsetHeader, "0")
+
+	response, err := http.DefaultClient.Do(request)
+	if err != nil {
+		t.Fatalf("POST /upload: %v", err)
+	}
+	t.Cleanup(func() { _ = response.Body.Close() })
+
+	if response.StatusCode != http.StatusRequestEntityTooLarge {
+		t.Fatalf("status = %d, want %d", response.StatusCode, http.StatusRequestEntityTooLarge)
 	}
 }
