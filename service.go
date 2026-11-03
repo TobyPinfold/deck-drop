@@ -20,6 +20,7 @@ const (
 	filesDroppedEvent = "files-dropped"
 	pairedEvent       = "paired"
 	offersEvent       = "offers"
+	pairingModeEvent  = "pairing-mode"
 )
 
 func init() {
@@ -28,6 +29,7 @@ func init() {
 	application.RegisterEvent[[]string](filesDroppedEvent)
 	application.RegisterEvent[[]trust.Peer](pairedEvent)
 	application.RegisterEvent[[]app.PendingOffer](offersEvent)
+	application.RegisterEvent[app.PairingMode](pairingModeEvent)
 }
 
 // service exposes the app to the frontend and ties it to the application
@@ -169,4 +171,15 @@ func (service *service) RespondToOffer(id int, accept bool) error {
 // SetAutoAccept chooses whether a paired device can send without asking.
 func (service *service) SetAutoAccept(fingerprint string, enabled bool) error {
 	return service.app.SetAutoAccept(fingerprint, enabled)
+}
+
+// GetPairingMode reports whether unpaired devices are currently listed.
+func (service *service) GetPairingMode() app.PairingMode {
+	return service.app.GetPairingMode()
+}
+
+// SetPairingMode lists nearby unpaired devices for a couple of minutes so
+// they can be paired, or stops doing so.
+func (service *service) SetPairingMode(enabled bool) app.PairingMode {
+	return service.app.SetPairingMode(enabled)
 }

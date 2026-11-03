@@ -58,6 +58,13 @@ export function Devices(): $CancellablePromise<discovery$0.Device[] | null> {
 }
 
 /**
+ * GetPairingMode reports whether unpaired devices are currently listed.
+ */
+export function GetPairingMode(): $CancellablePromise<app$0.PairingMode> {
+    return $Call.ByID(3267187438);
+}
+
+/**
  * Info reports whether the backend is running and where.
  */
 export function Info(): $CancellablePromise<app$0.Info> {
@@ -147,6 +154,14 @@ export function SendFiles(deviceName: string, paths: string[] | null): $Cancella
  */
 export function SetAutoAccept(fingerprint: string, enabled: boolean): $CancellablePromise<void> {
     return $Call.ByID(200463136, fingerprint, enabled);
+}
+
+/**
+ * SetPairingMode lists nearby unpaired devices for a couple of minutes so
+ * they can be paired, or stops doing so.
+ */
+export function SetPairingMode(enabled: boolean): $CancellablePromise<app$0.PairingMode> {
+    return $Call.ByID(2326368178, enabled);
 }
 
 /**

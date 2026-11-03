@@ -8,4 +8,9 @@ export interface Settings {
     "deviceName": string;
     "receiveDir": string;
     "port": number;
+
+    /**
+     * Hidden stops this device announcing itself on the network.
+     */
+    "hidden": boolean;
 }

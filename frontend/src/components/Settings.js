@@ -7,6 +7,7 @@ export function Settings({onSaved}) {
     const [deviceName, setDeviceName] = useState('');
     const [port, setPort] = useState('');
     const [receiveDir, setReceiveDir] = useState('');
+    const [hidden, setHidden] = useState(false);
     const [message, setMessage] = useState('');
 
     useEffect(() => {
@@ -14,6 +15,7 @@ export function Settings({onSaved}) {
             setDeviceName(settings.deviceName);
             setPort(settings.port);
             setReceiveDir(settings.receiveDir);
+            setHidden(settings.hidden);
         });
     }, []);
 
@@ -28,7 +30,7 @@ export function Settings({onSaved}) {
         event.preventDefault();
         setMessage('Saving…');
         try {
-            await SaveSettings({deviceName, receiveDir, port: Number(port)});
+            await SaveSettings({deviceName, receiveDir, port: Number(port), hidden});
             setMessage('Saved');
             onSaved();
         } catch (error) {
@@ -48,6 +50,10 @@ export function Settings({onSaved}) {
                 <span>Port</span>
                 <input type="number" min="1" max="65535" required
                        value=${port} onInput=${(event) => setPort(event.target.value)} />
+            </label>
+            <label class="toggle">
+                <input type="checkbox" checked=${hidden} onChange=${(event) => setHidden(event.target.checked)} />
+                Hide this device from the network (paired devices that know its address can still send)
             </label>
             <div class="field">
                 <span>Receive folder</span>

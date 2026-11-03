@@ -165,7 +165,7 @@ func (backend *Backend) Addr() string {
 // announce advertises the device. A failure is logged rather than returned
 // because file receiving still works without discovery.
 func (backend *Backend) announce() {
-	if backend.config.Announcer == nil {
+	if backend.config.Announcer == nil || backend.config.Hidden {
 		return
 	}
 

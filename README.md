@@ -73,6 +73,10 @@ Pairing is one way: pairing B with A lets B send to A. Pair the other way round 
 
 A headless device logs a one-time code at startup when run with `--pair`, for example `deckdrop --headless --pair`.
 
+### Visibility
+
+Only paired devices are listed. To find a new device to pair with, choose **Start pairing mode**: nearby unpaired devices are listed for two minutes, then hidden again. To stop announcing this device at all, turn on **Hide this device** in Settings; it persists between launches, and paired devices that know its address can still send.
+
 ### Accepting files
 
 Being paired is not enough to send: the sender first offers its files, and the receiver asks its user to **Accept** or **Decline** (B declines). Nothing is written until an offer is accepted, and only the offered files, up to their offered sizes, are accepted. An unanswered offer is declined after a minute. Resuming a paused or interrupted transfer does not ask again. Turn on **Always accept** next to a paired device to skip the prompt for it.
@@ -84,7 +88,7 @@ A headless device has nobody to ask, so it declines every offer unless run with 
 - There is no certificate authority. A sender checks that a device's certificate matches the fingerprint it has pinned for it.
 - Connections to a paired device are authenticated: the sender refuses a certificate that is not the pinned one. The fingerprint advertised over mDNS is only a hint for finding the pin; anyone can announce anything, but cannot present the paired device's certificate.
 - Pairing is only as strong as the code: an attacker has five guesses at a one in a million code per pairing attempt, and the person pairing should check the code appears on the device they expect.
-- Devices are still visible to everyone on the network; see issue #43.
+- mDNS is multicast on the local network. Hiding reduces what is listed and who can send, but does not hide a device from someone sniffing the network.
 - Deleting the identity files gives the device a new identity, which devices that pinned the old one will reject.
 
 ## Configuration

@@ -24,5 +24,5 @@ export function Devices({devices, pairedFingerprints, selectedName, onSelect}) {
                     </button>
                 </li>`)}
         </ul>
-        ${devices.length === 0 && html`<p class="empty">Looking for devices on your network…</p>`}`;
+        ${devices.length === 0 && html`<p class="empty">Looking for paired devices. To pair a new one, turn on pairing mode below.</p>`}`;
 }

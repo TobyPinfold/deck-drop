@@ -11,6 +11,14 @@ export interface Info {
 }
 
 /**
+ * PairingMode says whether unpaired devices are currently listed.
+ */
+export interface PairingMode {
+    "enabled": boolean;
+    "expiresAt": string;
+}
+
+/**
  * PendingOffer is a paired device asking to send files, waiting for the user
  * to accept or decline.
  */

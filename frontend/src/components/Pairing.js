@@ -1,11 +1,14 @@
 import {useEffect, useState} from 'preact/hooks';
 import {
     CancelPairing,
+    GetPairingMode,
+    SetPairingMode,
     PairWith,
     SetAutoAccept,
     StartPairing,
     Unpair,
 } from '../../bindings/github.com/TobyPinfold/deck-drop/service.js';
+import {Events} from '@wailsio/runtime';
 import {appendDigit, errorMessage, secondsLeft} from '../format.js';
 import {html} from '../html.js';
 
@@ -125,6 +128,35 @@ function EnterCode({deviceName, onDone}) {
         </div>`;
 }
 
+// Lists unpaired devices nearby for a couple of minutes, so they can be paired.
+function PairingMode() {
+    const [mode, setMode] = useState({enabled: false});
+    const [now, setNow] = useState(Date.now());
+
+    useEffect(() => {
+        GetPairingMode().then(setMode);
+        return Events.On('pairing-mode', (event) => setMode(event.data));
+    }, []);
+
+    useEffect(() => {
+        if (!mode.enabled) {
+            return undefined;
+        }
+        const timer = setInterval(() => setNow(Date.now()), 1000);
+        return () => clearInterval(timer);
+    }, [mode.enabled]);
+
+    return html`
+        <div class="panel">
+            <button class="action" type="button" onClick=${() => SetPairingMode(!mode.enabled).then(setMode)}>
+                ${mode.enabled ? 'Stop pairing mode' : 'Start pairing mode'}
+            </button>
+            <p class="hint">${mode.enabled
+                ? `Showing unpaired devices. Turns off in ${secondsLeft(mode.expiresAt, now)}s.`
+                : 'Unpaired devices are hidden. Start pairing mode to find a device to pair with.'}</p>
+        </div>`;
+}
+
 export function Pairing({paired, selectedDevice, selectedIsPaired}) {
     const [entering, setEntering] = useState(false);
     const [message, setMessage] = useState('');
@@ -164,6 +196,7 @@ export function Pairing({paired, selectedDevice, selectedIsPaired}) {
                         ? 'Enter the code it shows.'
                         : 'Select an unpaired device to enter its code.'}</p>
                 </div>`}
+        <${PairingMode} />
         <${ShowCode} paired=${paired} />
         <h3>Paired devices</h3>
         <ul class="paired">
