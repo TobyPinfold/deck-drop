@@ -1,87 +1,169 @@
-# deck-drop
-A steam deck first approach to file sharing
+# DeckDrop
 
-## Requirements
+Send files between your Steam Deck, PC and Mac over your home network. No accounts, no cloud: devices find each other on the local network, and everything is encrypted.
+
+- **For users:** [Install](#install), [Send your first file](#send-your-first-file), [Good to know](#good-to-know)
+- **For advanced users:** [Headless mode and configuration](#advanced-headless-mode-and-configuration)
+- **For developers:** [Development](#development), [HTTP API](#http-api), [Security design](#security-design)
+
+---
+
+# For users
+
+## Install
+
+Download the latest build for your system from the [Releases page](https://github.com/TobyPinfold/deck-drop/releases):
+
+| System                | Download                       |
+| --------------------- | ------------------------------ |
+| Steam Deck / Linux    | AppImage                       |
+| Windows               | Installer                      |
+| macOS (Apple Silicon) | Zipped app                     |
+
+The macOS and Windows builds are not signed yet. On macOS, right-click the app and choose **Open** the first time. On Windows, SmartScreen may warn you; choose **More info**, then **Run anyway**.
+
+## Send your first file
+
+Install DeckDrop on both devices, and make sure they are on the same network. DeckDrop works with a gamepad as well as a mouse: use the D-pad to move, A to select and B to go back.
+
+**1. Pair the devices (once).** Only paired devices can send files to each other.
+
+1. On the device that will *receive*, open **Pairing** and choose **Show pairing code**.
+2. On the device that will *send*, choose **Start pairing mode**, select the receiver in **Nearby devices**, choose **Pair with ...** and enter the six digit code.
+
+**2. Send.** Select the receiver, then choose or drop the files.
+
+**3. Accept.** The receiver asks whether to **Accept** or **Decline** (B declines). Accepted files are saved to `Downloads/DeckDrop` in your home folder, and appear under **Received**.
+
+Pairing works one way: pairing B with A lets B send to A. To send both ways, pair the other way round too.
+
+## Good to know
+
+- **Pausing and resuming:** pause a transfer, or lose the connection, and resume continues where it stopped. You are not asked to accept again.
+- **Skip the prompt:** turn on **Always accept** next to a paired device you trust.
+- **Unpairing:** **Unpair** removes a device, and it can no longer send until it is paired again.
+- **Who can see you:** only paired devices are listed. Unpaired devices appear for two minutes while pairing mode is on. To stop announcing your device altogether, turn on **Hide this device** in Settings. Paired devices that know its address can still send.
+- **Settings:** the device name, receive folder and port can be changed in **Settings**. Changes apply straight away. If the new port is in use, your previous settings stay.
+- **Pairing codes:** a code works once, expires after two minutes, and is discarded after five wrong guesses. Check that it is shown on the device you expect.
+- **Limits:** hiding a device and pairing reduce who can see and send to you, but they do not stop someone on your network who is sniffing traffic from seeing that DeckDrop is in use. File contents stay encrypted.
+- **Starting over:** deleting DeckDrop's config folder gives the device a new identity, and devices paired with the old one will refuse it. Pair again.
+
+Your settings, pairings and identity are kept in your user config folder: `~/Library/Application Support/DeckDrop` on macOS, `~/.config/DeckDrop` on Linux, `%AppData%\DeckDrop` on Windows.
+
+---
+
+# For advanced users
+
+## Advanced: headless mode and configuration
+
+The same binary runs without a window, for example on an always-on box that just receives files. Add `--headless`:
+
+```sh
+deckdrop --headless --pair                 # log a one-time pairing code at startup
+deckdrop --headless --accept               # accept files from paired devices without asking
+deckdrop --headless --port 9000 --name nas
+```
+
+A headless device has nobody to ask, so it **declines every offer unless you run it with `--accept`**, which accepts anything from paired devices.
+
+Environment variables and flags override saved settings for that run; flags win over environment variables.
+
+| Flag         | Environment variable   | Default                                   | Description                                              |
+| ------------ | ---------------------- | ----------------------------------------- | -------------------------------------------------------- |
+| `--port`     | `DECKDROP_PORT`        | `8080`                                    | TCP port to listen on (1-65535)                          |
+| `--dir`      | `DECKDROP_RECEIVE_DIR` | `~/Downloads/DeckDrop` (`received_files` headless) | Directory received files are saved to   |
+| `--name`     | `DECKDROP_DEVICE_NAME` | machine hostname                          | Device name shown to other devices                       |
+| `--headless` |                        | off                                       | Run without the desktop window                           |
+| `--pair`     |                        | off                                       | Log a one-time pairing code at startup (headless)        |
+| `--accept`   |                        | off                                       | Accept files from paired devices without asking (headless) |
+
+```sh
+DECKDROP_RECEIVE_DIR=$HOME/Downloads/DeckDrop deckdrop --headless
+```
+
+Run `deckdrop --help` to list the options.
+
+Try sending between two instances on one machine by running one headless and one with the window, with different ports and names:
+
+```sh
+deckdrop --headless --port 8099 --name other-deck --dir /tmp/dd-test --pair --accept
+deckdrop    # pair with "other-deck" using the logged code, then send it a file
+```
+
+The headless backend announces itself on the local network as `_deckdrop._tcp` via mDNS and saves received files to `./received_files` by default. Stop it with Ctrl+C.
+
+---
+
+# For developers
+
+## Development
+
+Requirements:
 
 - Go 1.27 or newer (see `go.mod`)
+- Node.js (current LTS) for the frontend
+- The Wails CLI: `go install github.com/wailsapp/wails/v3/cmd/wails3@v3.0.0` (make sure `$(go env GOPATH)/bin` is on your `PATH`)
+- On Linux / Steam Deck: GTK 4 and WebKitGTK 6.0 (for example `libgtk-4-dev libwebkitgtk-6.0-dev`)
 - [golangci-lint](https://golangci-lint.run/) for `make lint` (optional)
 
-## Desktop app
-
-DeckDrop is a single binary: a [Wails v3](https://v3.wails.io) window that embeds the backend. The backend starts and stops with the window.
-
-Prerequisites: Go, Node.js and the Wails CLI (`go install github.com/wailsapp/wails/v3/cmd/wails3@v3.0.0`, make sure `$(go env GOPATH)/bin` is on your `PATH`). On Linux/Steam Deck also install GTK 4 and WebKitGTK 6.0 (for example `libgtk-4-dev libwebkitgtk-6.0-dev`). Run `wails3 doctor` to check your setup.
+Run `wails3 doctor` to check your setup.
 
 ```sh
-wails3 dev    # run with live reload
-make app      # build the app into bin/
-```
-
-The desktop app accepts the same flags and environment variables as the headless backend (see [Configuration](#configuration)), and its received files default to `~/Downloads/DeckDrop`. Add `--headless` to run the same binary without a window.
-
-To try sending a file with two instances on one machine, run one headless and one with the window, using different ports and names:
-
-```sh
-bin/deckdrop --headless --port 8099 --name other-deck --dir /tmp/dd-test
-bin/deckdrop    # select "other-deck", then choose or drop a file
-```
-
-## Releases
-
-Pushing a tag such as `v0.1.0` runs the Release workflow, which builds a Linux AppImage (Steam Deck), a Windows installer and a macOS app bundle (zipped, Apple Silicon) and attaches them to a GitHub release. The macOS and Windows builds are unsigned, so macOS needs right-click → Open the first time and Windows may show a SmartScreen warning. The workflow also runs on pull requests that change `build/` so packaging problems are caught early.
-
-## Headless backend
-
-```sh
-go build -o deckdrop ./cmd/deckdrop   # build the binary
-./deckdrop                            # run it (or: go run ./cmd/deckdrop)
-make test                             # run the tests
+wails3 dev                            # run the desktop app with live reload
+make app                              # build the app into bin/
+go build -o deckdrop ./cmd/deckdrop   # build the headless-only binary
+make test                             # run the Go tests
 make lint                             # run the linter
+cd frontend && npm test               # frontend tests
 ```
 
-The backend listens on port 8080, saves received files to `./received_files`, and announces itself on the local network as `_deckdrop._tcp` via mDNS so other devices can find it. Stop it with Ctrl+C.
+After changing methods or types exposed to the frontend, regenerate the bindings with `wails3 generate bindings -clean=true -ts -i` and commit the result.
 
-## Go packages
+### Code layout
 
-The root package wires the Wails desktop application; `cmd/deckdrop` is the headless entry point. `internal/app` is the desktop-facing facade. `internal/backend` owns the receiving server lifecycle, with HTTP routes in `internal/backend/httpapi` and command-line/environment parsing in `internal/backend/config`. Discovery, sending, settings, and received-file history live in their respective `internal` packages.
+DeckDrop is a single binary: a [Wails v3](https://v3.wails.io) window that embeds the backend, which starts and stops with the window. The frontend is Preact with htm, built with Vite, in `frontend/`.
+
+The root package wires the Wails desktop application; `cmd/deckdrop` is the headless entry point. `internal/app` is the desktop-facing facade. `internal/backend` owns the receiving server lifecycle, with HTTP routes in `internal/backend/httpapi` and command-line/environment parsing in `internal/backend/config`. Identity, trust, pairing, offers, discovery, sending, settings and received-file history live in their own `internal` packages.
+
+### Releases
+
+Pushing a tag such as `v0.1.0` runs the Release workflow, which builds a Linux AppImage, a Windows installer and a macOS app bundle (zipped, Apple Silicon) and attaches them to a GitHub release. The workflow also runs on pull requests that change `build/` so packaging problems are caught early.
 
 ## HTTP API
 
-Files are sent in chunks so interrupted transfers can resume. The server speaks HTTPS only (TLS 1.3); see [Security](#security).
+Files are sent in chunks so interrupted transfers can resume. The server speaks HTTPS only (TLS 1.3); see [Security design](#security-design).
 
-| Endpoint                   | Description                                                                                             |
-| -------------------------- | ------------------------------------------------------------------------------------------------------- |
-| `GET /health`              | Returns 200 when the backend is running                                                                 |
-| `POST /pair`               | Pairs a device that proves it knows the one-time code (see [Security](#security))                      |
+| Endpoint                   | Description                                                                                                                 |
+| -------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| `GET /health`              | Returns 200 when the backend is running                                                                                     |
+| `POST /pair`               | Pairs a device that proves it knows the one-time code                                                                       |
 | `POST /offer`              | Asks the receiver to accept a list of files (`{"files":[{"name","size"}]}`). Waits for the user: 204 accepted, 403 declined |
-| `POST /upload`             | Writes the request body at a byte offset. Headers: `X-File-Name`, `X-File-Offset`. Returns 204          |
-| `GET /status?filename=...` | Returns the bytes received so far in the `X-File-Offset` header, to resume from                         |
+| `POST /upload`             | Writes the request body at a byte offset. Headers: `X-File-Name`, `X-File-Offset`. Returns 204                              |
+| `GET /status?filename=...` | Returns the bytes received so far in the `X-File-Offset` header, to resume from                                             |
 
-`/upload` and `/status` return 403 unless the caller presented the certificate of a paired device. `/upload` and `/status` also return 428 for a file that was not offered and accepted, and an upload cannot go past the size that was offered. Uploads over the maximum chunk size (64 MiB) are rejected with 413. Invalid file names are rejected with 400.
+`/offer`, `/upload` and `/status` return 403 unless the caller presented the certificate of a paired device. `/upload` and `/status` also return 428 for a file that was not offered and accepted, and an upload cannot go past the size that was offered. Uploads over the maximum chunk size (64 MiB) are rejected with 413. Invalid file names are rejected with 400.
 
-Only `/health` can be called without pairing, for example `curl -k https://localhost:8080/health` (`-k` because the certificate is self-signed).
+Only `/health` and `/pair` can be called without pairing, for example `curl -k https://localhost:8080/health` (`-k` because the certificate is self-signed).
 
-## Security
+## Security design
+
+### Identity and encryption
 
 Each device creates a self-signed certificate the first time it runs (`identity.crt` and `identity.key` in the config folder; the key is readable only by you). Its SHA-256 fingerprint identifies the device and is advertised in the mDNS `fp=` record. All transfers are encrypted with TLS 1.3.
 
 ### Pairing
 
-Only paired devices can send files to this one. To pair, open **Pairing** on the receiving device and choose **Show pairing code**. On the other device, select the receiver, choose **Pair with ...** and enter the six digit code (the on-screen keypad works with the D-pad and A). The code expires after two minutes, works once, and is discarded after five wrong attempts. The code is never sent: the other device sends an HMAC of both certificate fingerprints keyed with the code, so someone watching the network, or sitting in the middle with their own certificate, cannot reuse it.
+The receiver shows a one-time six digit code. The code is never sent: the other device sends an HMAC of both certificate fingerprints keyed with the code, so someone watching the network, or sitting in the middle with their own certificate, cannot reuse it. The code expires after two minutes, works once, and is discarded after five wrong attempts.
 
-Pairing is one way: pairing B with A lets B send to A. Pair the other way round to send in both directions. Each side stores the other's certificate fingerprint in `paired.json` in the config folder, and the sender pins it. **Unpair** removes a device, and it can no longer send until it pairs again.
+Each side stores the other's certificate fingerprint in `paired.json` in the config folder, and the sender pins it. The server requests a client certificate and accepts requests only from paired fingerprints, so the certificate is the credential and there are no tokens.
 
-A headless device logs a one-time code at startup when run with `--pair`, for example `deckdrop --headless --pair`.
+### Offers
+
+A paired device must offer its files first. The receiver's user accepts or declines, and an unanswered offer is declined after a minute. Nothing is written until an offer is accepted, and only the offered files, up to their offered sizes, are accepted. Grants are held in memory, are removed when a file completes, and expire after a day unused, so resuming does not ask again.
 
 ### Visibility
 
-Only paired devices are listed. To find a new device to pair with, choose **Start pairing mode**: nearby unpaired devices are listed for two minutes, then hidden again. To stop announcing this device at all, turn on **Hide this device** in Settings; it persists between launches, and paired devices that know its address can still send.
-
-### Accepting files
-
-Being paired is not enough to send: the sender first offers its files, and the receiver asks its user to **Accept** or **Decline** (B declines). Nothing is written until an offer is accepted, and only the offered files, up to their offered sizes, are accepted. An unanswered offer is declined after a minute. Resuming a paused or interrupted transfer does not ask again. Turn on **Always accept** next to a paired device to skip the prompt for it.
-
-A headless device has nobody to ask, so it declines every offer unless run with `--accept`, which accepts anything from paired devices.
+By default only paired devices are listed. Pairing mode lists nearby unpaired devices for two minutes. The **Hide this device** setting stops mDNS announcing entirely.
 
 ### Trust model and limits
 
@@ -90,23 +172,3 @@ A headless device has nobody to ask, so it declines every offer unless run with 
 - Pairing is only as strong as the code: an attacker has five guesses at a one in a million code per pairing attempt, and the person pairing should check the code appears on the device they expect.
 - mDNS is multicast on the local network. Hiding reduces what is listed and who can send, but does not hide a device from someone sniffing the network.
 - Deleting the identity files gives the device a new identity, which devices that pinned the old one will reject.
-
-## Configuration
-
-DeckDrop works with no configuration. The device name, receive folder and port can be changed in the app's Settings section; changes apply immediately and are saved to `settings.json` in your user config folder (`~/Library/Application Support/DeckDrop` on macOS, `~/.config/DeckDrop` on Linux, `%AppData%\DeckDrop` on Windows). If the new port is already in use, the previous settings stay in effect.
-
-Environment variables and command-line flags override saved settings for that run; flags win over environment variables.
-
-| Flag     | Environment variable   | Default          | Description                              |
-| -------- | ---------------------- | ---------------- | ---------------------------------------- |
-| `--port` | `DECKDROP_PORT`        | `8080`           | TCP port to listen on (1-65535)          |
-| `--dir`  | `DECKDROP_RECEIVE_DIR` | `received_files` | Directory received files are saved to    |
-| `--name` | `DECKDROP_DEVICE_NAME` | machine hostname | Device name shown to other devices       |
-| `--headless` |                    | off              | Run without the desktop window (desktop binary only) |
-
-```sh
-deckdrop --port 9000 --name steam-deck
-DECKDROP_RECEIVE_DIR=$HOME/Downloads/DeckDrop deckdrop
-```
-
-Run `deckdrop --help` to list the options.
