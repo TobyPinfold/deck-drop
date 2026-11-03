@@ -2,7 +2,10 @@ module github.com/TobyPinfold/deck-drop
 
 go 1.27.3
 
-require github.com/libp2p/zeroconf/v2 v2.2.0
+require (
+	github.com/alecthomas/kong v1.17.0
+	github.com/libp2p/zeroconf/v2 v2.2.0
+)
 
 require (
 	github.com/miekg/dns v1.1.72 // indirect
