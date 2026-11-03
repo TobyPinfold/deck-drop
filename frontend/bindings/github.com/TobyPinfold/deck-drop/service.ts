@@ -41,6 +41,20 @@ export function Info(): $CancellablePromise<app$0.Info> {
 }
 
 /**
+ * PauseTransfer stops a queued or in-flight transfer.
+ */
+export function PauseTransfer(id: number): $CancellablePromise<void> {
+    return $Call.ByID(1001523790, id);
+}
+
+/**
+ * ResumeTransfer continues a paused or failed transfer.
+ */
+export function ResumeTransfer(id: number): $CancellablePromise<void> {
+    return $Call.ByID(3091245841, id);
+}
+
+/**
  * SendFiles queues the files at paths to be sent to the named device.
  */
 export function SendFiles(deviceName: string, paths: string[] | null): $CancellablePromise<void> {
