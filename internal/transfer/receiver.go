@@ -7,6 +7,7 @@ import (
 	"io"
 	"io/fs"
 	"os"
+	"sync"
 )
 
 const (
@@ -25,6 +26,10 @@ var (
 // Receiver writes incoming file chunks into a single directory.
 type Receiver struct {
 	root *os.Root
+
+	// openMutex serializes opening files: concurrent creation of the same
+	// new file through os.Root can fail spuriously with ENOENT.
+	openMutex sync.Mutex
 }
 
 // NewReceiver creates directory if needed and receives files into it.
@@ -50,7 +55,9 @@ func (receiver *Receiver) WriteChunk(name string, offset int64, chunk io.Reader)
 		return 0, ErrInvalidOffset
 	}
 
+	receiver.openMutex.Lock()
 	file, err := receiver.root.OpenFile(name, os.O_CREATE|os.O_WRONLY, filePermissions)
+	receiver.openMutex.Unlock()
 	if err != nil {
 		return 0, fmt.Errorf("open %q: %w", name, err)
 	}

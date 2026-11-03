@@ -6,7 +6,9 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
+	"sync"
 	"testing"
 )
 
@@ -251,5 +253,29 @@ func TestWriteChunkAcceptsOrdinaryNames(t *testing.T) {
 	for _, name := range names {
 		writeChunk(t, receiver, name, 0, []byte("data"))
 		assertFileContent(t, directory, name, []byte("data"))
+	}
+}
+
+func TestConcurrentChunksCreateTheSameNewFile(t *testing.T) {
+	receiver, _ := newTestReceiver(t)
+
+	const chunkCount = 16
+	var group sync.WaitGroup
+	errs := make(chan error, chunkCount)
+	for chunk := range chunkCount {
+		group.Add(1)
+		go func() {
+			defer group.Done()
+			_, err := receiver.WriteChunk("shared.bin", int64(chunk), strings.NewReader(strconv.Itoa(chunk%10)))
+			errs <- err
+		}()
+	}
+	group.Wait()
+	close(errs)
+
+	for err := range errs {
+		if err != nil {
+			t.Errorf("WriteChunk: %v", err)
+		}
 	}
 }
