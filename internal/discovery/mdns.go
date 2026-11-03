@@ -4,6 +4,7 @@ package discovery
 
 import (
 	"fmt"
+	"io"
 	"sync"
 
 	"github.com/libp2p/zeroconf/v2"
@@ -34,4 +35,16 @@ func Announce(instance string, port int) (*Registration, error) {
 func (registration *Registration) Close() error {
 	registration.closeOnce.Do(registration.server.Shutdown)
 	return nil
+}
+
+// MDNS announces devices over mDNS. It satisfies the backend's Announcer.
+type MDNS struct{}
+
+// Announce advertises instance on port and returns a Closer that stops it.
+func (MDNS) Announce(instance string, port int) (io.Closer, error) {
+	registration, err := Announce(instance, port)
+	if err != nil {
+		return nil, err
+	}
+	return registration, nil
 }
