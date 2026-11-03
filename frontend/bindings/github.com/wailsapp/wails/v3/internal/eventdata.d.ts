@@ -20,6 +20,7 @@ declare module "@wailsio/runtime" {
         interface CustomEvents {
             "devices": discovery$0.Device[] | null;
             "files-dropped": string[] | null;
+            "offers": app$0.PendingOffer[] | null;
             "paired": trust$0.Peer[] | null;
             "transfers": app$0.Transfer[] | null;
         }

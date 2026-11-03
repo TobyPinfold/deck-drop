@@ -3,6 +3,7 @@
 
 export type {
     Info,
+    PendingOffer,
     ReceivedFile,
     Transfer
 } from "./models.js";

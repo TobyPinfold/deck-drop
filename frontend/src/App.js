@@ -1,7 +1,8 @@
 import {useEffect, useState} from 'preact/hooks';
 import {Events} from '@wailsio/runtime';
-import {Devices as ListDevices, Info, PairedDevices, Transfers as ListTransfers} from '../bindings/github.com/TobyPinfold/deck-drop/service.js';
+import {Devices as ListDevices, Info, Offers as ListOffers, PairedDevices, Transfers as ListTransfers} from '../bindings/github.com/TobyPinfold/deck-drop/service.js';
 import {Devices} from './components/Devices.js';
+import {Offers} from './components/Offers.js';
 import {Pairing} from './components/Pairing.js';
 import {Received} from './components/Received.js';
 import {Send} from './components/Send.js';
@@ -34,6 +35,7 @@ export function App() {
     const devices = useBackendList('devices', ListDevices);
     const transfers = useBackendList('transfers', ListTransfers);
     const paired = useBackendList('paired', PairedDevices);
+    const offers = useBackendList('offers', ListOffers);
     const [requestedName, setRequestedName] = useState(null);
     const [hint, setHint] = useState('Select a device, then choose or drop files to send.');
     const [settingsVersion, setSettingsVersion] = useState(0);
@@ -49,6 +51,12 @@ export function App() {
     useEffect(() => {
         startNavigation({
             onBack: () => {
+                // An incoming offer has to be answered first; B declines it.
+                const decline = document.querySelector('[data-offer-decline]');
+                if (decline) {
+                    decline.click();
+                    return;
+                }
                 const tiles = [...document.querySelectorAll('.tile')];
                 const target = tiles.find((tile) => tile.getAttribute('aria-pressed') === 'true') ?? tiles[0];
                 target?.focus();
@@ -62,6 +70,7 @@ export function App() {
             <h1>DeckDrop</h1>
             <p>${status}</p>
         </header>
+        <${Offers} offers=${offers} />
         <main class="columns">
             <div class="column">
                 <${Devices} devices=${devices} pairedFingerprints=${pairedFingerprints} selectedName=${selectedName} onSelect=${setRequestedName} />

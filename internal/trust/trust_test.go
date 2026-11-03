@@ -83,3 +83,15 @@ func TestOpenRejectsCorruptFile(t *testing.T) {
 func writeFile(path, content string) error {
 	return os.WriteFile(path, []byte(content), 0o600)
 }
+
+func TestAutoAcceptIsKeptAcrossRepairing(t *testing.T) {
+	store, _ := Open("")
+	_ = store.Add(Peer{Fingerprint: "abc", Name: "deck"})
+	_ = store.SetAutoAccept("abc", true)
+	_ = store.Add(Peer{Fingerprint: "abc", Name: "renamed"})
+
+	peer, ok := store.Get("abc")
+	if !ok || !peer.AutoAccept || peer.Name != "renamed" {
+		t.Errorf("Get() = %+v, %v, want the renamed device with auto accept kept", peer, ok)
+	}
+}

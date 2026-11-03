@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {appendDigit, errorMessage, formatBytes, transferDetailText, transferPercent, transferStatusText, secondsLeft} from './format.js';
+import {appendDigit, errorMessage, formatBytes, transferDetailText, transferPercent, transferStatusText, secondsLeft, offerSummary} from './format.js';
 
 test('formatBytes uses decimal units', () => {
     assert.equal(formatBytes(999), '999 B');
@@ -17,6 +17,7 @@ test('transferPercent is full when done and safe when the total is unknown', () 
 test('transferStatusText shows the error for failed transfers', () => {
     assert.equal(transferStatusText({status: 'failed', error: 'boom'}), 'Failed: boom');
     assert.equal(transferStatusText({status: 'paused'}), 'paused');
+    assert.equal(transferStatusText({status: 'waiting'}), 'Waiting for the other device to accept');
 });
 
 test('transferDetailText shows speed only while sending', () => {
@@ -40,4 +41,9 @@ test('secondsLeft counts down and never goes negative', () => {
     const expires = new Date(10_000).toISOString();
     assert.equal(secondsLeft(expires, 7_500), 3);
     assert.equal(secondsLeft(expires, 20_000), 0);
+});
+
+test('offerSummary names a single file and counts several', () => {
+    assert.equal(offerSummary({count: 1, bytes: 1500, names: ['a.sav']}), 'a.sav (1.5 KB)');
+    assert.equal(offerSummary({count: 3, bytes: 3000, names: ['a', 'b', 'c']}), '3 files (3.0 KB)');
 });

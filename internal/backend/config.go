@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/TobyPinfold/deck-drop/internal/identity"
+	"github.com/TobyPinfold/deck-drop/internal/offer"
 	"github.com/TobyPinfold/deck-drop/internal/pairing"
 	"github.com/TobyPinfold/deck-drop/internal/trust"
 )
@@ -38,6 +39,15 @@ type Config struct {
 
 	// Headless runs without the desktop window.
 	Headless bool
+
+	// Offers decides whether files offered by paired devices are accepted.
+	// When set, nothing is written until an offer is accepted. Nil accepts
+	// anything from a paired device.
+	Offers offer.Decider
+
+	// AcceptPaired makes Serve accept every offer from a paired device
+	// instead of declining them, for devices with nobody to ask.
+	AcceptPaired bool
 
 	// PairOnStart makes Serve log a one-time pairing code at startup.
 	PairOnStart bool

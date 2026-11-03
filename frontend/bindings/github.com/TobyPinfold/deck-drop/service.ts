@@ -65,6 +65,13 @@ export function Info(): $CancellablePromise<app$0.Info> {
 }
 
 /**
+ * Offers lists the files other devices are waiting to send.
+ */
+export function Offers(): $CancellablePromise<app$0.PendingOffer[] | null> {
+    return $Call.ByID(2926156186);
+}
+
+/**
  * OpenReceiveFolder shows the receive folder in the system file manager.
  */
 export function OpenReceiveFolder(): $CancellablePromise<void> {
@@ -107,6 +114,13 @@ export function ReceivedFiles(): $CancellablePromise<app$0.ReceivedFile[] | null
 }
 
 /**
+ * RespondToOffer accepts or declines files another device wants to send.
+ */
+export function RespondToOffer(id: number, accept: boolean): $CancellablePromise<void> {
+    return $Call.ByID(823123967, id, accept);
+}
+
+/**
  * ResumeTransfer continues a paused or failed transfer.
  */
 export function ResumeTransfer(id: number): $CancellablePromise<void> {
@@ -126,6 +140,13 @@ export function SaveSettings(updated: settings$0.Settings): $CancellablePromise<
  */
 export function SendFiles(deviceName: string, paths: string[] | null): $CancellablePromise<void> {
     return $Call.ByID(2706696230, deviceName, paths);
+}
+
+/**
+ * SetAutoAccept chooses whether a paired device can send without asking.
+ */
+export function SetAutoAccept(fingerprint: string, enabled: boolean): $CancellablePromise<void> {
+    return $Call.ByID(200463136, fingerprint, enabled);
 }
 
 /**

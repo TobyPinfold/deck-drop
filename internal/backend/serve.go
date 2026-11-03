@@ -5,10 +5,15 @@ import (
 	"fmt"
 	"log/slog"
 	"time"
+
+	"github.com/TobyPinfold/deck-drop/internal/offer"
 )
 
 // Serve runs a backend with config until ctx is cancelled, then stops it.
 func Serve(ctx context.Context, logger *slog.Logger, config Config) error {
+	if config.Offers == nil {
+		config.Offers = offer.Policy(config.AcceptPaired)
+	}
 	service := New(logger, config)
 	if err := service.Start(); err != nil {
 		return fmt.Errorf("start backend: %w", err)

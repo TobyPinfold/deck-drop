@@ -23,17 +23,19 @@ type App struct {
 	// restartMu serialises settings changes, which restart the backend.
 	restartMu sync.Mutex
 
-	mu         sync.Mutex
-	received   []string
-	backend    *backend.Backend
-	config     backend.Config
-	selfName   string
-	receiveDir string
-	startError string
-	devices    []discovery.Device
-	transfers  []Transfer
-	sending    bool
-	cancels    map[int]context.CancelFunc
+	mu          sync.Mutex
+	received    []string
+	backend     *backend.Backend
+	config      backend.Config
+	selfName    string
+	receiveDir  string
+	startError  string
+	devices     []discovery.Device
+	transfers   []Transfer
+	offers      []PendingOffer
+	lastOfferID int
+	sending     bool
+	cancels     map[int]context.CancelFunc
 
 	sendContext context.Context
 	stopSending context.CancelFunc
@@ -75,6 +77,14 @@ type Options struct {
 
 	// OnPairedChanged is called when a device is paired or unpaired.
 	OnPairedChanged func([]trust.Peer)
+
+	// OnOffersChanged is called when a device starts or stops waiting for
+	// the user to accept its files.
+	OnOffersChanged func([]PendingOffer)
+
+	// OfferTimeout is how long an offer waits for an answer before it is
+	// declined. It defaults to a minute.
+	OfferTimeout time.Duration
 
 	// Now returns the current time. It defaults to time.Now.
 	Now func() time.Time
@@ -118,6 +128,7 @@ func New(logger *slog.Logger, config backend.Config, options Options) *App {
 		app.received = names
 	}
 	config.Receipts = app
+	config.Offers = app
 	if config.Trust != nil && options.OnPairedChanged != nil {
 		config.Trust.OnChange(options.OnPairedChanged)
 	}

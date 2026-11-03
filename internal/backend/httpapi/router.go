@@ -26,15 +26,18 @@ func NewHandler(
 	mux.HandleFunc("GET /health", handleHealth)
 	if access != nil {
 		mux.HandleFunc("POST /pair", access.handlePair)
+		if access.Offers != nil {
+			mux.Handle("POST /offer", access.require(http.HandlerFunc(access.handleOffer)))
+		}
 	}
-	mux.Handle("POST /upload", access.require(uploadHandler{
+	mux.Handle("POST /upload", access.require(access.requireOffer(uploadName, uploadHandler{
 		receiver:     receiver,
 		log:          logger,
 		directory:    directory,
 		maxChunkSize: maxChunkSize,
 		receipts:     receipts,
-	}))
-	mux.Handle("GET /status", access.require(statusHandler{receiver: receiver, log: logger}))
+	})))
+	mux.Handle("GET /status", access.require(access.requireOffer(statusName, statusHandler{receiver: receiver, log: logger})))
 	return mux
 }
 

@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net"
 	"path/filepath"
@@ -9,16 +10,19 @@ import (
 	"strconv"
 
 	"github.com/TobyPinfold/deck-drop/internal/discovery"
+	"github.com/TobyPinfold/deck-drop/internal/transfer"
 	"time"
 )
 
 // Transfer statuses.
 const (
-	StatusQueued  = "queued"
-	StatusSending = "sending"
-	StatusPaused  = "paused"
-	StatusDone    = "done"
-	StatusFailed  = "failed"
+	StatusWaiting  = "waiting"
+	StatusDeclined = "declined"
+	StatusQueued   = "queued"
+	StatusSending  = "sending"
+	StatusPaused   = "paused"
+	StatusDone     = "done"
+	StatusFailed   = "failed"
 )
 
 // Sender uploads one file to the device at address ("host:port"), which must
@@ -27,6 +31,12 @@ const (
 // resumes it.
 type Sender interface {
 	Send(ctx context.Context, address, fingerprint, path string, progress func(sent, total int64)) error
+}
+
+// Offerer is a Sender that can ask the receiving device to accept files
+// before they are sent. Senders without it send straight away.
+type Offerer interface {
+	Offer(ctx context.Context, address, fingerprint string, paths []string) error
 }
 
 // Transfer is one file queued to be sent to a device.
@@ -76,18 +86,29 @@ func (app *App) SendFiles(deviceName string, paths []string) error {
 		}
 		fingerprint = device.Fingerprint
 	}
+	offerer, asks := app.options.Sender.(Offerer)
+	status := StatusQueued
+	if asks {
+		status = StatusWaiting
+	}
+	var ids []int
 	for _, path := range paths {
+		ids = append(ids, len(app.transfers)+1)
 		app.transfers = append(app.transfers, Transfer{
 			ID:          len(app.transfers) + 1,
 			Name:        filepath.Base(path),
 			Device:      deviceName,
-			Status:      StatusQueued,
+			Status:      status,
 			path:        path,
 			address:     address,
 			fingerprint: fingerprint,
 		})
 	}
-	startWorker := len(paths) > 0 && app.claimWorker()
+	startWorker := len(paths) > 0 && !asks && app.claimWorker()
+	startOffer := len(paths) > 0 && asks
+	if startOffer {
+		app.sendersDone.Add(1)
+	}
 	snapshot := slices.Clone(app.transfers)
 	app.mu.Unlock()
 
@@ -95,7 +116,50 @@ func (app *App) SendFiles(deviceName string, paths []string) error {
 	if startWorker {
 		go app.sendQueued()
 	}
+	if startOffer {
+		go app.offerFiles(offerer, address, fingerprint, paths, ids)
+	}
 	return nil
+}
+
+// offerFiles waits for the receiving device to answer, then queues the files
+// if they were accepted. The files wait without a deadline of their own, as
+// the receiver decides how long to wait for its user.
+func (app *App) offerFiles(offerer Offerer, address, fingerprint string, paths []string, ids []int) {
+	defer app.sendersDone.Done()
+
+	err := offerer.Offer(app.sendContext, address, fingerprint, paths)
+	if err != nil && app.sendContext.Err() == nil {
+		app.log.Error("failed to offer files", "device", address, "error", err)
+	}
+
+	app.mu.Lock()
+	startWorker := false
+	for _, id := range ids {
+		index := app.indexOf(id)
+		if index < 0 || app.transfers[index].Status != StatusWaiting {
+			continue
+		}
+		switch {
+		case err == nil:
+			app.transfers[index].Status = StatusQueued
+		case errors.Is(err, transfer.ErrDeclined):
+			app.transfers[index].Status = StatusDeclined
+		default:
+			app.transfers[index].Status = StatusFailed
+			app.transfers[index].Error = err.Error()
+		}
+	}
+	if err == nil {
+		startWorker = app.claimWorker()
+	}
+	snapshot := slices.Clone(app.transfers)
+	app.mu.Unlock()
+
+	app.notifyTransfers(snapshot)
+	if startWorker {
+		go app.sendQueued()
+	}
 }
 
 // deviceNamed must be called with app.mu held.

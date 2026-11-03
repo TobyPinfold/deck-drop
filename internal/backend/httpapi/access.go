@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/TobyPinfold/deck-drop/internal/identity"
+	"github.com/TobyPinfold/deck-drop/internal/offer"
 	"github.com/TobyPinfold/deck-drop/internal/pairing"
 	"github.com/TobyPinfold/deck-drop/internal/trust"
 )
@@ -30,6 +31,7 @@ type PairResponse struct {
 // Paired lists the devices allowed to send files.
 type Paired interface {
 	Has(fingerprint string) bool
+	Get(fingerprint string) (trust.Peer, bool)
 	Add(peer trust.Peer) error
 }
 
@@ -43,6 +45,12 @@ type Access struct {
 	Paired     Paired
 	Pairer     Pairer
 	DeviceName string
+
+	// Offers decides whether a paired device may send files. When set,
+	// uploads are only accepted for files that were offered and accepted.
+	// Nil lets every paired device send anything.
+	Offers offer.Decider
+	Grants *offer.Grants
 }
 
 // require lets a request through only from a paired device, which is

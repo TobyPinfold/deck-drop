@@ -72,7 +72,7 @@ func waitForFinished(t *testing.T, transfers chan []Transfer) []Transfer {
 		case list := <-transfers:
 			finished := true
 			for _, transfer := range list {
-				if transfer.Status == StatusQueued || transfer.Status == StatusSending {
+				if transfer.Status == StatusWaiting || transfer.Status == StatusQueued || transfer.Status == StatusSending {
 					finished = false
 				}
 			}

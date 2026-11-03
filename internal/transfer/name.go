@@ -20,6 +20,9 @@ var windowsDeviceNames = map[string]bool{
 	"LPT6": true, "LPT7": true, "LPT8": true, "LPT9": true,
 }
 
+// ValidName reports whether name can be used for a received file.
+func ValidName(name string) bool { return isPlainFileName(name) }
+
 // isPlainFileName reports whether name is a single file name that is safe to
 // create on Linux, macOS and Windows.
 func isPlainFileName(name string) bool {
