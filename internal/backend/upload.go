@@ -23,6 +23,8 @@ type uploadHandler struct {
 	directory string
 
 	maxChunkSize int64
+
+	receipts ReceiptListener
 }
 
 // ServeHTTP writes the request body into the named file at the given offset.
@@ -47,6 +49,9 @@ func (handler uploadHandler) ServeHTTP(writer http.ResponseWriter, request *http
 	if _, err := handler.receiver.WriteChunk(name, offset, body); err != nil {
 		handler.writeError(writer, name, err)
 		return
+	}
+	if handler.receipts != nil {
+		handler.receipts.Received(name)
 	}
 	writer.WriteHeader(http.StatusNoContent)
 }

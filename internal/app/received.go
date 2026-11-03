@@ -24,7 +24,28 @@ func (app *App) ReceiveDir() string {
 	return app.receiveDir
 }
 
-// ReceivedFiles lists the files in the receive directory, newest first.
+// Received records that a file was received. It implements
+// backend.ReceiptListener.
+func (app *App) Received(name string) {
+	app.mu.Lock()
+	if slices.Contains(app.received, name) {
+		app.mu.Unlock()
+		return
+	}
+	app.received = append(app.received, name)
+	names := slices.Clone(app.received)
+	app.mu.Unlock()
+
+	if app.options.HistoryStore == nil {
+		return
+	}
+	if err := app.options.HistoryStore.Save(names); err != nil {
+		app.log.Warn("failed to save received file history", "error", err)
+	}
+}
+
+// ReceivedFiles lists the files DeckDrop has received that are still in the
+// receive directory, newest first.
 func (app *App) ReceivedFiles() ([]ReceivedFile, error) {
 	entries, err := os.ReadDir(app.ReceiveDir())
 	if errors.Is(err, fs.ErrNotExist) {
@@ -34,8 +55,15 @@ func (app *App) ReceivedFiles() ([]ReceivedFile, error) {
 		return nil, fmt.Errorf("read receive directory: %w", err)
 	}
 
+	app.mu.Lock()
+	received := slices.Clone(app.received)
+	app.mu.Unlock()
+
 	files := make([]ReceivedFile, 0, len(entries))
 	for _, entry := range entries {
+		if !slices.Contains(received, entry.Name()) {
+			continue
+		}
 		info, err := entry.Info()
 		if err != nil || !info.Mode().IsRegular() {
 			continue

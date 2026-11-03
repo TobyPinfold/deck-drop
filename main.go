@@ -17,6 +17,7 @@ import (
 	"github.com/TobyPinfold/deck-drop/internal/app"
 	"github.com/TobyPinfold/deck-drop/internal/backend"
 	"github.com/TobyPinfold/deck-drop/internal/discovery"
+	"github.com/TobyPinfold/deck-drop/internal/history"
 	"github.com/TobyPinfold/deck-drop/internal/settings"
 	"github.com/TobyPinfold/deck-drop/internal/transfer"
 )
@@ -192,6 +193,7 @@ func main() {
 			desktop.Event.Emit(devicesEvent, devices)
 		},
 		SettingsStore:    settingsStore,
+		HistoryStore:     openHistoryStore(),
 		Sender:           transfer.Sender{},
 		ProgressInterval: progressInterval,
 		OnTransfersChanged: func(transfers []app.Transfer) {
@@ -239,4 +241,14 @@ func openSettingsStore() (settings.Store, error) {
 		return settings.Store{}, err
 	}
 	return settings.NewStore(path), nil
+}
+
+// openHistoryStore returns nil when there is nowhere to keep the history, in
+// which case only files received during this run are listed.
+func openHistoryStore() app.HistoryStore {
+	path, err := history.DefaultPath()
+	if err != nil {
+		return nil
+	}
+	return history.NewStore(path)
 }

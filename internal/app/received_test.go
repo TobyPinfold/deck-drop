@@ -40,7 +40,12 @@ func TestReceivedFilesListsNewestFirstWithSizes(t *testing.T) {
 		t.Fatalf("Mkdir: %v", err)
 	}
 
-	files, err := newAppReceivingInto(t, directory).ReceivedFiles()
+	app := newAppReceivingInto(t, directory)
+	app.Received("old.txt")
+	app.Received("new.txt")
+	app.Received("subdirectory")
+
+	files, err := app.ReceivedFiles()
 
 	if err != nil {
 		t.Fatalf("ReceivedFiles: %v", err)
@@ -65,5 +70,43 @@ func TestReceiveDirReportsTheConfiguredDirectory(t *testing.T) {
 
 	if got := newAppReceivingInto(t, directory).ReceiveDir(); got != directory {
 		t.Errorf("ReceiveDir = %q, want %q", got, directory)
+	}
+}
+
+func TestReceivedFilesIgnoresFilesDeckDropDidNotReceive(t *testing.T) {
+	directory := t.TempDir()
+	writeReceived(t, directory, "mine.txt", "1", time.Now())
+	writeReceived(t, directory, "already-here.txt", "2", time.Now())
+	app := newAppReceivingInto(t, directory)
+	app.Received("mine.txt")
+
+	files, err := app.ReceivedFiles()
+
+	if err != nil || len(files) != 1 || files[0].Name != "mine.txt" {
+		t.Errorf("ReceivedFiles = %v, %v; want only mine.txt", files, err)
+	}
+}
+
+type memoryHistory struct{ names []string }
+
+func (history *memoryHistory) Load() ([]string, error) { return history.names, nil }
+func (history *memoryHistory) Save(names []string) error {
+	history.names = names
+	return nil
+}
+
+func TestReceivedFilesAreRememberedAcrossLaunches(t *testing.T) {
+	directory := t.TempDir()
+	writeReceived(t, directory, "mine.txt", "1", time.Now())
+	history := &memoryHistory{}
+	config := backend.DefaultConfig()
+	config.ReceiveDir = directory
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+
+	New(logger, config, Options{HistoryStore: history}).Received("mine.txt")
+	files, err := New(logger, config, Options{HistoryStore: history}).ReceivedFiles()
+
+	if err != nil || len(files) != 1 || files[0].Name != "mine.txt" {
+		t.Errorf("ReceivedFiles after relaunch = %v, %v; want mine.txt", files, err)
 	}
 }

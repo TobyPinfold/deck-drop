@@ -23,6 +23,7 @@ type App struct {
 	restartMu sync.Mutex
 
 	mu         sync.Mutex
+	received   []string
 	backend    *backend.Backend
 	config     backend.Config
 	selfName   string
@@ -67,6 +68,10 @@ type Options struct {
 	// until the app closes.
 	SettingsStore SettingsStore
 
+	// HistoryStore remembers received files between launches. Without one,
+	// only files received during this run are listed.
+	HistoryStore HistoryStore
+
 	// Now returns the current time. It defaults to time.Now.
 	Now func() time.Time
 }
@@ -74,6 +79,12 @@ type Options struct {
 // SettingsStore saves the settings a user changed.
 type SettingsStore interface {
 	Save(settings.Settings) error
+}
+
+// HistoryStore remembers the names of received files.
+type HistoryStore interface {
+	Load() ([]string, error)
+	Save([]string) error
 }
 
 // Info describes the embedded backend for the frontend.
@@ -86,10 +97,8 @@ type Info struct {
 // New returns an App that will run a backend with config.
 func New(logger *slog.Logger, config backend.Config, options Options) *App {
 	sendContext, stopSending := context.WithCancel(context.Background())
-	return &App{
+	app := &App{
 		log:         logger,
-		backend:     backend.New(logger, config),
-		config:      config,
 		options:     options,
 		selfName:    discovery.InstanceName(config.DeviceName),
 		receiveDir:  config.ReceiveDir,
@@ -97,6 +106,17 @@ func New(logger *slog.Logger, config backend.Config, options Options) *App {
 		stopSending: stopSending,
 		cancels:     make(map[int]context.CancelFunc),
 	}
+	if options.HistoryStore != nil {
+		names, err := options.HistoryStore.Load()
+		if err != nil {
+			logger.Warn("ignoring received file history", "error", err)
+		}
+		app.received = names
+	}
+	config.Receipts = app
+	app.config = config
+	app.backend = backend.New(logger, config)
+	return app
 }
 
 // Startup starts the backend and device discovery. A backend failure is

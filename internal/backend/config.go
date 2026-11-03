@@ -12,6 +12,11 @@ const (
 	fallbackDeviceName  = "deckdrop"
 )
 
+// ReceiptListener is told about each file that has data written to it.
+type ReceiptListener interface {
+	Received(name string)
+}
+
 // Config holds the settings for the backend.
 type Config struct {
 	// Port is the TCP port the HTTP server listens on. Zero picks a free port.
@@ -29,6 +34,9 @@ type Config struct {
 
 	// Headless runs without the desktop window.
 	Headless bool
+
+	// Receipts is told when a file is received. Nil disables notifications.
+	Receipts ReceiptListener
 
 	// Announcer advertises the device on the network. Nil disables announcing.
 	Announcer Announcer
