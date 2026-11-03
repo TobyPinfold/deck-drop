@@ -1,6 +1,41 @@
 # deck-drop
 A steam deck first approach to file sharing
 
+## Requirements
+
+- Go 1.27 or newer (see `go.mod`)
+- [golangci-lint](https://golangci-lint.run/) for `make lint` (optional)
+
+## Build, run and test
+
+```sh
+go build -o deckdrop ./cmd/deckdrop   # build the binary
+./deckdrop                            # run it (or: go run ./cmd/deckdrop)
+make test                             # run the tests
+make lint                             # run the linter
+```
+
+The backend listens on port 8080, saves received files to `./received_files`, and announces itself on the local network as `_deckdrop._tcp` via mDNS so other devices can find it. Stop it with Ctrl+C.
+
+## HTTP API
+
+Files are sent in chunks so interrupted transfers can resume.
+
+| Endpoint                   | Description                                                                                             |
+| -------------------------- | ------------------------------------------------------------------------------------------------------- |
+| `GET /health`              | Returns 200 when the backend is running                                                                 |
+| `POST /upload`             | Writes the request body at a byte offset. Headers: `X-File-Name`, `X-File-Offset`. Returns 204          |
+| `GET /status?filename=...` | Returns the bytes received so far in the `X-File-Offset` header, to resume from                         |
+
+Uploads over the maximum chunk size (64 MiB) are rejected with 413. Invalid file names are rejected with 400.
+
+```sh
+curl -X POST --data-binary @photo.jpg \
+  -H 'X-File-Name: photo.jpg' -H 'X-File-Offset: 0' \
+  http://localhost:8080/upload
+curl -i 'http://localhost:8080/status?filename=photo.jpg'
+```
+
 ## Configuration
 
 DeckDrop works with no configuration. Settings can be overridden with environment variables or command-line flags; flags win over environment variables.
