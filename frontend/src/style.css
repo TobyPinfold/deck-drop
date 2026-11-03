@@ -239,11 +239,11 @@ header {
     overflow-y: auto;
 }
 
-.column > :first-child h2,
-.column > h2:first-child {
+.column > h2:first-of-type {
     margin-top: 12px;
 }
 
 .action {
     min-height: 56px;
+    white-space: nowrap;
 }
