@@ -11,7 +11,7 @@ import (
 
 func main() {
 	logger := slog.New(slog.NewTextHandler(os.Stderr, nil))
-	backendService := backend.New(logger)
+	backendService := backend.New(logger, backend.DefaultConfig())
 
 	if err := backendService.Start(); err != nil {
 		logger.Error("failed to start backend", "error", err)
