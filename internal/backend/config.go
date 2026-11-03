@@ -65,6 +65,10 @@ type Config struct {
 	Trust   *trust.Store
 	Pairing *pairing.Manager
 
+	// Hidden stops the device announcing itself even if there is an
+	// Announcer. Paired devices that know its address can still send.
+	Hidden bool
+
 	// Announcer advertises the device on the network. Nil disables announcing.
 	Announcer Announcer
 }

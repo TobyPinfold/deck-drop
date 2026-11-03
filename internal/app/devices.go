@@ -7,7 +7,8 @@ import (
 	"github.com/TobyPinfold/deck-drop/internal/discovery"
 )
 
-// Devices returns the other DeckDrop devices currently on the network.
+// Devices returns the other DeckDrop devices to show: paired ones, plus every
+// nearby one while pairing mode is on.
 func (app *App) Devices() []discovery.Device {
 	app.mu.Lock()
 	defer app.mu.Unlock()
@@ -42,16 +43,31 @@ func (app *App) stopDiscoveryAndWait() {
 // listener.
 func (app *App) handleDevices(found []discovery.Device) {
 	app.mu.Lock()
-	others := make([]discovery.Device, 0, len(found))
-	for _, device := range found {
-		if device.Name != app.selfName {
-			others = append(others, device)
+	app.found = found
+	app.mu.Unlock()
+	app.refreshDevices()
+}
+
+// refreshDevices recomputes the visible devices from what was found and
+// notifies the listener if they changed. With a trust store, unpaired devices
+// are hidden unless pairing mode is on.
+func (app *App) refreshDevices() {
+	app.mu.Lock()
+	showAll := app.config.Trust == nil || app.pairingModeActive()
+	visible := make([]discovery.Device, 0, len(app.found))
+	for _, device := range app.found {
+		if device.Name == app.selfName {
+			continue
+		}
+		if showAll || app.config.Trust.Has(device.Fingerprint) {
+			visible = append(visible, device)
 		}
 	}
-	app.devices = others
+	changed := !slices.Equal(visible, app.devices) || app.devices == nil
+	app.devices = visible
 	app.mu.Unlock()
 
-	if app.options.OnDevicesChanged != nil {
-		app.options.OnDevicesChanged(slices.Clone(others))
+	if changed && app.options.OnDevicesChanged != nil {
+		app.options.OnDevicesChanged(slices.Clone(visible))
 	}
 }

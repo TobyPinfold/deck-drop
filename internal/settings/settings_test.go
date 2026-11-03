@@ -47,6 +47,15 @@ func TestLoadRejectsACorruptFile(t *testing.T) {
 	}
 }
 
+func TestHiddenSettingIsApplied(t *testing.T) {
+	if !(Settings{Hidden: true}).ApplyTo(backend.Config{}).Hidden {
+		t.Error("Hidden was not applied")
+	}
+	if (Settings{}).ApplyTo(backend.Config{Hidden: true}).Hidden {
+		t.Error("Hidden was not cleared")
+	}
+}
+
 func TestApplyToOverridesOnlyTheSettingsThatAreSet(t *testing.T) {
 	defaults := backend.Config{DeviceName: "default-name", ReceiveDir: "/default", Port: 8080}
 

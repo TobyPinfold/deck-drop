@@ -103,3 +103,17 @@ func TestStartWithoutAnnouncerDoesNotAnnounce(t *testing.T) {
 		t.Fatal("backend should be running")
 	}
 }
+
+func TestHiddenDeviceIsNotAnnounced(t *testing.T) {
+	announcer := &fakeAnnouncer{}
+	logger := slog.New(slog.NewTextHandler(&bytes.Buffer{}, nil))
+	testBackend := New(logger, Config{Port: 0, ReceiveDir: t.TempDir(), DeviceName: "steam-deck", Announcer: announcer, Hidden: true})
+	if err := testBackend.Start(); err != nil {
+		t.Fatalf("Start: %v", err)
+	}
+	t.Cleanup(func() { _ = testBackend.Stop() })
+
+	if len(announcer.instances) != 0 {
+		t.Errorf("a hidden device announced %v", announcer.instances)
+	}
+}

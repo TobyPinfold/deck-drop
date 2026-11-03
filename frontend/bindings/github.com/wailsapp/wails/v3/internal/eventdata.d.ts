@@ -22,6 +22,7 @@ declare module "@wailsio/runtime" {
             "files-dropped": string[] | null;
             "offers": app$0.PendingOffer[] | null;
             "paired": trust$0.Peer[] | null;
+            "pairing-mode": app$0.PairingMode;
             "transfers": app$0.Transfer[] | null;
         }
     }

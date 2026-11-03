@@ -24,6 +24,9 @@ type Settings struct {
 	DeviceName string `json:"deviceName"`
 	ReceiveDir string `json:"receiveDir"`
 	Port       int    `json:"port"`
+
+	// Hidden stops this device announcing itself on the network.
+	Hidden bool `json:"hidden"`
 }
 
 // Validate reports why the settings cannot be used.
@@ -51,6 +54,7 @@ func (settings Settings) ApplyTo(config backend.Config) backend.Config {
 	if settings.Port != 0 {
 		config.Port = settings.Port
 	}
+	config.Hidden = settings.Hidden
 	return config
 }
 

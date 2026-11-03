@@ -11,6 +11,7 @@ import (
 
 	"github.com/TobyPinfold/deck-drop/internal/backend"
 	"github.com/TobyPinfold/deck-drop/internal/discovery"
+	"github.com/TobyPinfold/deck-drop/internal/trust"
 )
 
 const eventTimeout = 5 * time.Second
@@ -103,5 +104,70 @@ func TestShutdownStopsScanning(t *testing.T) {
 	time.Sleep(50 * time.Millisecond)
 	if got := scanner.scans.Load(); got != scansAtShutdown {
 		t.Fatalf("scans continued after Shutdown: %d -> %d", scansAtShutdown, got)
+	}
+}
+
+func newTrustingApp(t *testing.T, scanner discovery.Scanner, events *deviceEvents, paired ...string) *App {
+	t.Helper()
+	store, err := trust.Open("")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, fingerprint := range paired {
+		if err := store.Add(trust.Peer{Fingerprint: fingerprint, Name: "paired"}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	config := backend.DefaultConfig()
+	config.Port = 0
+	config.ReceiveDir = t.TempDir()
+	config.DeviceName = "this-device"
+	config.Trust = store
+	app := New(slog.New(slog.NewTextHandler(io.Discard, nil)), config, Options{
+		Scanner: scanner, ScanInterval: time.Millisecond, OnDevicesChanged: events.record,
+		PairingModeDuration: 50 * time.Millisecond,
+	})
+	app.Startup(context.Background())
+	t.Cleanup(func() { app.Shutdown(context.Background()) })
+	return app
+}
+
+func TestUnpairedDevicesAreHiddenUnlessPairingMode(t *testing.T) {
+	scanner := &fakeScanner{devices: []discovery.Device{
+		{Name: "friend", Host: "h1", Port: 1, Fingerprint: "known"},
+		{Name: "stranger", Host: "h2", Port: 2, Fingerprint: "unknown"},
+	}}
+	events := newDeviceEvents()
+	app := newTrustingApp(t, scanner, events, "known")
+
+	if got := events.next(t); len(got) != 1 || got[0].Name != "friend" {
+		t.Fatalf("devices = %v, want only the paired device", got)
+	}
+
+	app.SetPairingMode(true)
+	if got := events.next(t); len(got) != 2 {
+		t.Fatalf("in pairing mode devices = %v, want both", got)
+	}
+	if got := events.next(t); len(got) != 1 {
+		t.Fatalf("after the timeout devices = %v, want only the paired device", got)
+	}
+	if app.GetPairingMode().Enabled {
+		t.Error("pairing mode is still on after the timeout")
+	}
+}
+
+func TestPairingTakesEffectInTheList(t *testing.T) {
+	scanner := &fakeScanner{devices: []discovery.Device{{Name: "stranger", Host: "h", Port: 2, Fingerprint: "unknown"}}}
+	events := newDeviceEvents()
+	app := newTrustingApp(t, scanner, events)
+
+	if got := events.next(t); len(got) != 0 {
+		t.Fatalf("devices = %v, want none", got)
+	}
+	if err := app.config.Trust.Add(trust.Peer{Fingerprint: "unknown", Name: "stranger"}); err != nil {
+		t.Fatal(err)
+	}
+	if got := events.next(t); len(got) != 1 {
+		t.Fatalf("devices after pairing = %v, want the new device", got)
 	}
 }

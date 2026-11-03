@@ -3,6 +3,7 @@
 
 export type {
     Info,
+    PairingMode,
     PendingOffer,
     ReceivedFile,
     Transfer

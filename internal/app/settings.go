@@ -17,6 +17,7 @@ func (app *App) Settings() settings.Settings {
 		DeviceName: app.config.DeviceName,
 		ReceiveDir: app.config.ReceiveDir,
 		Port:       app.config.Port,
+		Hidden:     app.config.Hidden,
 	}
 }
 

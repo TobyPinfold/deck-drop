@@ -29,6 +29,11 @@ export const Offers = "offers";
 export const Paired = "paired";
 
 /**
+ * Name of the custom event "pairing-mode".
+ */
+export const PairingMode = "pairing-mode";
+
+/**
  * Name of the custom event "transfers".
  */
 export const Transfers = "transfers";

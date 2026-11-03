@@ -23,19 +23,22 @@ type App struct {
 	// restartMu serialises settings changes, which restart the backend.
 	restartMu sync.Mutex
 
-	mu          sync.Mutex
-	received    []string
-	backend     *backend.Backend
-	config      backend.Config
-	selfName    string
-	receiveDir  string
-	startError  string
-	devices     []discovery.Device
-	transfers   []Transfer
-	offers      []PendingOffer
-	lastOfferID int
-	sending     bool
-	cancels     map[int]context.CancelFunc
+	mu           sync.Mutex
+	received     []string
+	backend      *backend.Backend
+	config       backend.Config
+	selfName     string
+	receiveDir   string
+	startError   string
+	found        []discovery.Device
+	devices      []discovery.Device
+	pairingEnd   time.Time
+	pairingTimer *time.Timer
+	transfers    []Transfer
+	offers       []PendingOffer
+	lastOfferID  int
+	sending      bool
+	cancels      map[int]context.CancelFunc
 
 	sendContext context.Context
 	stopSending context.CancelFunc
@@ -86,6 +89,13 @@ type Options struct {
 	// declined. It defaults to a minute.
 	OfferTimeout time.Duration
 
+	// PairingModeDuration is how long pairing mode stays on. It defaults to
+	// two minutes.
+	PairingModeDuration time.Duration
+
+	// OnPairingModeChanged is called when pairing mode turns on or off.
+	OnPairingModeChanged func(PairingMode)
+
 	// Now returns the current time. It defaults to time.Now.
 	Now func() time.Time
 }
@@ -129,8 +139,13 @@ func New(logger *slog.Logger, config backend.Config, options Options) *App {
 	}
 	config.Receipts = app
 	config.Offers = app
-	if config.Trust != nil && options.OnPairedChanged != nil {
-		config.Trust.OnChange(options.OnPairedChanged)
+	if config.Trust != nil {
+		config.Trust.OnChange(func(peers []trust.Peer) {
+			if options.OnPairedChanged != nil {
+				options.OnPairedChanged(peers)
+			}
+			app.refreshDevices()
+		})
 	}
 	app.config = config
 	app.backend = backend.New(logger, config)
@@ -151,6 +166,7 @@ func (app *App) Startup(_ context.Context) {
 func (app *App) Shutdown(_ context.Context) {
 	app.stopDiscoveryAndWait()
 	app.stopSending()
+	app.stopPairingTimer()
 	app.sendersDone.Wait()
 	app.restartMu.Lock()
 	defer app.restartMu.Unlock()
