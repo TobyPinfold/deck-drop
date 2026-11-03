@@ -8,4 +8,10 @@ export interface Device {
     "name": string;
     "host": string;
     "port": number;
+
+    /**
+     * Fingerprint is the device's advertised certificate fingerprint. It is
+     * not trustworthy until confirmed by pairing.
+     */
+    "fingerprint": string;
 }

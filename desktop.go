@@ -31,7 +31,7 @@ func runDesktop(logger *slog.Logger, config backend.Config, settingsStore app.Se
 		},
 		SettingsStore:    settingsStore,
 		HistoryStore:     openHistoryStore(),
-		Sender:           transfer.Sender{},
+		Sender:           transfer.Sender{Secure: true},
 		ProgressInterval: progressInterval,
 		OnTransfersChanged: func(transfers []app.Transfer) {
 			desktop.Event.Emit(transfersEvent, transfers)

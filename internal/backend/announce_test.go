@@ -10,18 +10,20 @@ import (
 )
 
 type fakeAnnouncer struct {
-	err       error
-	instances []string
-	ports     []int
-	closed    int
+	err          error
+	instances    []string
+	ports        []int
+	fingerprints []string
+	closed       int
 }
 
-func (announcer *fakeAnnouncer) Announce(instance string, port int) (io.Closer, error) {
+func (announcer *fakeAnnouncer) Announce(instance string, port int, fingerprint string) (io.Closer, error) {
 	if announcer.err != nil {
 		return nil, announcer.err
 	}
 	announcer.instances = append(announcer.instances, instance)
 	announcer.ports = append(announcer.ports, port)
+	announcer.fingerprints = append(announcer.fingerprints, fingerprint)
 	return closerFunc(func() error {
 		announcer.closed++
 		return nil

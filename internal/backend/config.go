@@ -3,6 +3,8 @@ package backend
 import (
 	"os"
 	"strings"
+
+	"github.com/TobyPinfold/deck-drop/internal/identity"
 )
 
 const (
@@ -37,6 +39,10 @@ type Config struct {
 
 	// Receipts is told when a file is received. Nil disables notifications.
 	Receipts ReceiptListener
+
+	// Identity is the certificate the server presents. Nil serves plain HTTP,
+	// which is only meant for tests.
+	Identity *identity.Identity
 
 	// Announcer advertises the device on the network. Nil disables announcing.
 	Announcer Announcer
