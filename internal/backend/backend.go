@@ -13,6 +13,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/TobyPinfold/deck-drop/internal/backend/httpapi"
 	"github.com/TobyPinfold/deck-drop/internal/transfer"
 )
 
@@ -62,7 +63,13 @@ func (backend *Backend) Start() error {
 	}
 
 	server := &http.Server{
-		Handler:           newRouter(receiver, backend.log, backend.config),
+		Handler: httpapi.NewHandler(
+			receiver,
+			backend.log,
+			backend.config.ReceiveDir,
+			backend.config.maxChunkSize(),
+			backend.config.Receipts,
+		),
 		ReadHeaderTimeout: readHeaderTimeout,
 	}
 	backend.server = server

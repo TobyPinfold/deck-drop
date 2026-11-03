@@ -9,6 +9,7 @@ import (
 	"syscall"
 
 	"github.com/TobyPinfold/deck-drop/internal/backend"
+	backendconfig "github.com/TobyPinfold/deck-drop/internal/backend/config"
 	"github.com/TobyPinfold/deck-drop/internal/discovery"
 )
 
@@ -17,8 +18,8 @@ const usageExitCode = 2
 func main() {
 	logger := slog.New(slog.NewTextHandler(os.Stderr, nil))
 
-	config, err := backend.LoadConfig(backend.DefaultConfig(), os.Args[1:], os.Stderr)
-	if errors.Is(err, backend.ErrHelp) {
+	config, err := backendconfig.LoadConfig(backend.DefaultConfig(), os.Args[1:], os.Stderr)
+	if errors.Is(err, backendconfig.ErrHelp) {
 		return
 	}
 	if err != nil {

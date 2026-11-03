@@ -209,8 +209,8 @@ func TestStreamedUploadOverMaxChunkSizeIsRejected(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewRequest: %v", err)
 	}
-	request.Header.Set(fileNameHeader, "streamed.bin")
-	request.Header.Set(fileOffsetHeader, "0")
+	request.Header.Set("X-File-Name", "streamed.bin")
+	request.Header.Set("X-File-Offset", "0")
 
 	response, err := http.DefaultClient.Do(request)
 	if err != nil {
