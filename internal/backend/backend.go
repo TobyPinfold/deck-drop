@@ -62,7 +62,7 @@ func (backend *Backend) Start() error {
 	}
 
 	server := &http.Server{
-		Handler:           newRouter(receiver, backend.log, backend.config.maxChunkSize()),
+		Handler:           newRouter(receiver, backend.log, backend.config.ReceiveDir, backend.config.maxChunkSize()),
 		ReadHeaderTimeout: readHeaderTimeout,
 	}
 	backend.server = server
@@ -73,7 +73,7 @@ func (backend *Backend) Start() error {
 	go backend.serve(server, listener, backend.served)
 	backend.announce()
 
-	backend.log.Info("backend started", "addr", listener.Addr().String())
+	backend.log.Info("backend started", "addr", listener.Addr().String(), "dir", backend.config.ReceiveDir)
 	return nil
 }
 

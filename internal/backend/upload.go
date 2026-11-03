@@ -4,6 +4,7 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
+	"path/filepath"
 	"strconv"
 
 	"github.com/TobyPinfold/deck-drop/internal/transfer"
@@ -17,6 +18,9 @@ const (
 type uploadHandler struct {
 	receiver *transfer.Receiver
 	log      *slog.Logger
+
+	// directory is only used to tell the user where files are saved.
+	directory string
 
 	maxChunkSize int64
 }
@@ -34,6 +38,10 @@ func (handler uploadHandler) ServeHTTP(writer http.ResponseWriter, request *http
 		http.Error(writer, "chunk too large", http.StatusRequestEntityTooLarge)
 		return
 	}
+	if offset == 0 {
+		handler.log.Info("receiving file", "file", name, "path", filepath.Join(handler.directory, name))
+	}
+
 	body := http.MaxBytesReader(writer, request.Body, handler.maxChunkSize)
 
 	if _, err := handler.receiver.WriteChunk(name, offset, body); err != nil {
