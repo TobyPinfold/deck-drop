@@ -11,22 +11,27 @@ import (
 
 	"github.com/TobyPinfold/deck-drop/internal/backend"
 	"github.com/TobyPinfold/deck-drop/internal/discovery"
+	"github.com/TobyPinfold/deck-drop/internal/settings"
 )
 
 // App ties the backend's lifetime to the desktop window's lifetime.
 type App struct {
-	log        *slog.Logger
+	log     *slog.Logger
+	options Options
+
+	// restartMu serialises settings changes, which restart the backend.
+	restartMu sync.Mutex
+
+	mu         sync.Mutex
 	backend    *backend.Backend
-	options    Options
+	config     backend.Config
 	selfName   string
 	receiveDir string
 	startError string
-
-	mu        sync.Mutex
-	devices   []discovery.Device
-	transfers []Transfer
-	sending   bool
-	cancels   map[int]context.CancelFunc
+	devices    []discovery.Device
+	transfers  []Transfer
+	sending    bool
+	cancels    map[int]context.CancelFunc
 
 	sendContext context.Context
 	stopSending context.CancelFunc
@@ -58,8 +63,17 @@ type Options struct {
 	// transfer. Zero reports every update.
 	ProgressInterval time.Duration
 
+	// SettingsStore persists changed settings. Without one, changes only last
+	// until the app closes.
+	SettingsStore SettingsStore
+
 	// Now returns the current time. It defaults to time.Now.
 	Now func() time.Time
+}
+
+// SettingsStore saves the settings a user changed.
+type SettingsStore interface {
+	Save(settings.Settings) error
 }
 
 // Info describes the embedded backend for the frontend.
@@ -75,6 +89,7 @@ func New(logger *slog.Logger, config backend.Config, options Options) *App {
 	return &App{
 		log:         logger,
 		backend:     backend.New(logger, config),
+		config:      config,
 		options:     options,
 		selfName:    discovery.InstanceName(config.DeviceName),
 		receiveDir:  config.ReceiveDir,
@@ -87,9 +102,9 @@ func New(logger *slog.Logger, config backend.Config, options Options) *App {
 // Startup starts the backend and device discovery. A backend failure is
 // reported through Info rather than preventing the window from opening.
 func (app *App) Startup(_ context.Context) {
-	if err := app.backend.Start(); err != nil {
+	if err := app.currentBackend().Start(); err != nil {
 		app.log.Error("failed to start backend", "error", err)
-		app.startError = err.Error()
+		app.setStartError(err)
 	}
 	app.startDiscovery()
 }
@@ -99,18 +114,39 @@ func (app *App) Shutdown(_ context.Context) {
 	app.stopDiscoveryAndWait()
 	app.stopSending()
 	app.sendersDone.Wait()
-	if err := app.backend.Stop(); err != nil {
+	app.restartMu.Lock()
+	defer app.restartMu.Unlock()
+	if err := app.currentBackend().Stop(); err != nil {
 		app.log.Error("failed to stop backend", "error", err)
 	}
 }
 
 // Info reports whether the backend is running and where.
 func (app *App) Info() Info {
+	running := app.currentBackend()
+	app.mu.Lock()
+	defer app.mu.Unlock()
 	return Info{
-		Running: app.backend.Running(),
-		Port:    app.backend.Port(),
+		Running: running.Running(),
+		Port:    running.Port(),
 		Error:   app.startError,
 	}
+}
+
+func (app *App) currentBackend() *backend.Backend {
+	app.mu.Lock()
+	defer app.mu.Unlock()
+	return app.backend
+}
+
+func (app *App) setStartError(err error) {
+	app.mu.Lock()
+	defer app.mu.Unlock()
+	if err == nil {
+		app.startError = ""
+		return
+	}
+	app.startError = err.Error()
 }
 
 // DefaultReceiveDir is where the desktop app saves files. A relative path

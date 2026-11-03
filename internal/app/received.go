@@ -19,12 +19,14 @@ type ReceivedFile struct {
 
 // ReceiveDir is the directory received files are saved to.
 func (app *App) ReceiveDir() string {
+	app.mu.Lock()
+	defer app.mu.Unlock()
 	return app.receiveDir
 }
 
 // ReceivedFiles lists the files in the receive directory, newest first.
 func (app *App) ReceivedFiles() ([]ReceivedFile, error) {
-	entries, err := os.ReadDir(app.receiveDir)
+	entries, err := os.ReadDir(app.ReceiveDir())
 	if errors.Is(err, fs.ErrNotExist) {
 		return []ReceivedFile{}, nil
 	}
