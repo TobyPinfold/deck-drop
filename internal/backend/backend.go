@@ -70,6 +70,7 @@ func (backend *Backend) Start() error {
 			backend.config.ReceiveDir,
 			backend.config.maxChunkSize(),
 			backend.config.Receipts,
+			backend.access(),
 		),
 		ReadHeaderTimeout: readHeaderTimeout,
 	}
@@ -188,4 +189,16 @@ func (backend *Backend) stopAnnouncing() {
 		backend.log.Warn("failed to stop announcing device", "error", err)
 	}
 	backend.announcement = nil
+}
+
+// access restricts uploads to paired devices when pairing is configured.
+func (backend *Backend) access() *httpapi.Access {
+	if backend.config.Trust == nil || backend.config.Pairing == nil {
+		return nil
+	}
+	return &httpapi.Access{
+		Paired:     backend.config.Trust,
+		Pairer:     backend.config.Pairing,
+		DeviceName: backend.config.DeviceName,
+	}
 }

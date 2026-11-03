@@ -2,7 +2,7 @@ import {useEffect} from 'preact/hooks';
 import {html} from '../html.js';
 
 // Tiles are keyed by device name, so a re-render keeps the focused tile.
-export function Devices({devices, selectedName, onSelect}) {
+export function Devices({devices, pairedFingerprints, selectedName, onSelect}) {
     // Give the first tile focus once, so the gamepad has somewhere to start.
     useEffect(() => {
         if (document.activeElement === document.body) {
@@ -20,6 +20,7 @@ export function Devices({devices, selectedName, onSelect}) {
                             onClick=${() => onSelect(device.name)}>
                         <span class="tile-name">${device.name}</span>
                         <span class="tile-address">${device.host}:${device.port}</span>
+                        <span class="tile-badge">${pairedFingerprints.has(device.fingerprint) ? 'Paired' : 'Not paired'}</span>
                     </button>
                 </li>`)}
         </ul>

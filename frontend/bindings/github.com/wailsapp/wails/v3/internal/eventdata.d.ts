@@ -11,12 +11,16 @@ import type * as app$0 from "../../../../TobyPinfold/deck-drop/internal/app/mode
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
 import type * as discovery$0 from "../../../../TobyPinfold/deck-drop/internal/discovery/models.js";
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore: Unused imports
+import type * as trust$0 from "../../../../TobyPinfold/deck-drop/internal/trust/models.js";
 
 declare module "@wailsio/runtime" {
     namespace Events {
         interface CustomEvents {
             "devices": discovery$0.Device[] | null;
             "files-dropped": string[] | null;
+            "paired": trust$0.Peer[] | null;
             "transfers": app$0.Transfer[] | null;
         }
     }

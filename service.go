@@ -9,19 +9,23 @@ import (
 
 	"github.com/TobyPinfold/deck-drop/internal/app"
 	"github.com/TobyPinfold/deck-drop/internal/discovery"
+	"github.com/TobyPinfold/deck-drop/internal/pairing"
 	"github.com/TobyPinfold/deck-drop/internal/settings"
+	"github.com/TobyPinfold/deck-drop/internal/trust"
 )
 
 const (
 	devicesEvent      = "devices"
 	transfersEvent    = "transfers"
 	filesDroppedEvent = "files-dropped"
+	pairedEvent       = "paired"
 )
 
 func init() {
 	application.RegisterEvent[[]discovery.Device](devicesEvent)
 	application.RegisterEvent[[]app.Transfer](transfersEvent)
 	application.RegisterEvent[[]string](filesDroppedEvent)
+	application.RegisterEvent[[]trust.Peer](pairedEvent)
 }
 
 // service exposes the app to the frontend and ties it to the application
@@ -122,4 +126,30 @@ func (service *service) ChooseFolder() (string, error) {
 // Info reports whether the backend is running and where.
 func (service *service) Info() app.Info {
 	return service.app.Info()
+}
+
+// StartPairing shows a one-time code another device enters to pair with this
+// one.
+func (service *service) StartPairing() (pairing.Code, error) {
+	return service.app.StartPairing()
+}
+
+// CancelPairing discards the pairing code.
+func (service *service) CancelPairing() {
+	service.app.CancelPairing()
+}
+
+// PairWith pairs with the named device using the code it is showing.
+func (service *service) PairWith(ctx context.Context, deviceName, code string) error {
+	return service.app.PairWith(ctx, deviceName, code)
+}
+
+// Unpair revokes the pairing with the device that has fingerprint.
+func (service *service) Unpair(fingerprint string) error {
+	return service.app.Unpair(fingerprint)
+}
+
+// PairedDevices lists the devices this one is paired with.
+func (service *service) PairedDevices() []trust.Peer {
+	return service.app.PairedDevices()
 }

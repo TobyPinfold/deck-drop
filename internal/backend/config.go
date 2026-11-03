@@ -5,6 +5,8 @@ import (
 	"strings"
 
 	"github.com/TobyPinfold/deck-drop/internal/identity"
+	"github.com/TobyPinfold/deck-drop/internal/pairing"
+	"github.com/TobyPinfold/deck-drop/internal/trust"
 )
 
 const (
@@ -37,12 +39,21 @@ type Config struct {
 	// Headless runs without the desktop window.
 	Headless bool
 
+	// PairOnStart makes Serve log a one-time pairing code at startup.
+	PairOnStart bool
+
 	// Receipts is told when a file is received. Nil disables notifications.
 	Receipts ReceiptListener
 
 	// Identity is the certificate the server presents. Nil serves plain HTTP,
 	// which is only meant for tests.
 	Identity *identity.Identity
+
+	// Trust and Pairing restrict uploads to paired devices and let devices
+	// pair. Both must be set; if either is nil uploads are open to everyone,
+	// which is only meant for tests.
+	Trust   *trust.Store
+	Pairing *pairing.Manager
 
 	// Announcer advertises the device on the network. Nil disables announcing.
 	Announcer Announcer

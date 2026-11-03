@@ -34,3 +34,13 @@ export function transferDetailText(transfer) {
 export function errorMessage(error) {
     return error?.message ?? String(error);
 }
+
+// Adds digit to a code being typed, ignoring anything past maxLength.
+export function appendDigit(code, digit, maxLength) {
+    return code.length < maxLength ? code + digit : code;
+}
+
+// Whole seconds until expiresAt (an ISO time string), never below zero.
+export function secondsLeft(expiresAt, nowMs) {
+    return Math.max(0, Math.ceil((new Date(expiresAt).getTime() - nowMs) / 1000));
+}

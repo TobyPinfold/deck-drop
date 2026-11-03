@@ -23,7 +23,7 @@ type fakeSender struct {
 	failed map[string]bool
 }
 
-func (sender *fakeSender) Send(_ context.Context, address, path string, _ func(sent, total int64)) error {
+func (sender *fakeSender) Send(_ context.Context, address, _, path string, _ func(sent, total int64)) error {
 	sender.mu.Lock()
 	defer sender.mu.Unlock()
 	sender.sent = append(sender.sent, sentFile{address, path})
@@ -137,7 +137,7 @@ func TestFailedTransferIsReportedAndQueueContinues(t *testing.T) {
 // scriptedSender runs a function per file so tests control progress and timing.
 type scriptedSender func(ctx context.Context, path string, progress func(sent, total int64)) error
 
-func (sender scriptedSender) Send(ctx context.Context, _, path string, progress func(sent, total int64)) error {
+func (sender scriptedSender) Send(ctx context.Context, _, _, path string, progress func(sent, total int64)) error {
 	return sender(ctx, path, progress)
 }
 

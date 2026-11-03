@@ -31,6 +31,7 @@ type options struct {
 	Name string `help:"Device name shown to other devices." env:"DECKDROP_DEVICE_NAME" default:"${default_name}"`
 
 	Headless bool `help:"Run without the desktop window, only receiving files."`
+	Pair     bool `help:"Log a one-time pairing code at startup (headless mode)."`
 }
 
 // Validate is called by kong after parsing.
@@ -90,5 +91,6 @@ func LoadConfig(defaults backend.Config, args []string, output io.Writer) (confi
 	defaults.ReceiveDir = parsed.Dir
 	defaults.DeviceName = parsed.Name
 	defaults.Headless = parsed.Headless
+	defaults.PairOnStart = parsed.Pair
 	return defaults, nil
 }

@@ -7,6 +7,8 @@ import (
 	"path/filepath"
 	"slices"
 	"strconv"
+
+	"github.com/TobyPinfold/deck-drop/internal/discovery"
 	"time"
 )
 
@@ -19,11 +21,12 @@ const (
 	StatusFailed  = "failed"
 )
 
-// Sender uploads one file to the device at address ("host:port"), reporting
+// Sender uploads one file to the device at address ("host:port"), which must
+// present the certificate with fingerprint (any if empty), reporting
 // progress as it goes. Cancelling ctx stops the upload; sending the file again
 // resumes it.
 type Sender interface {
-	Send(ctx context.Context, address, path string, progress func(sent, total int64)) error
+	Send(ctx context.Context, address, fingerprint, path string, progress func(sent, total int64)) error
 }
 
 // Transfer is one file queued to be sent to a device.
@@ -39,8 +42,9 @@ type Transfer struct {
 	Total int64   `json:"total"`
 	Speed float64 `json:"speed"`
 
-	path    string
-	address string
+	path        string
+	address     string
+	fingerprint string
 }
 
 // Transfers returns every transfer queued since the app started.
@@ -58,19 +62,29 @@ func (app *App) SendFiles(deviceName string, paths []string) error {
 	}
 
 	app.mu.Lock()
-	address, err := app.addressOf(deviceName)
+	device, err := app.deviceNamed(deviceName)
 	if err != nil {
 		app.mu.Unlock()
 		return err
 	}
+	address := net.JoinHostPort(device.Host, strconv.Itoa(device.Port))
+	fingerprint := ""
+	if app.config.Trust != nil {
+		if !app.config.Trust.Has(device.Fingerprint) {
+			app.mu.Unlock()
+			return fmt.Errorf("pair with %q before sending files to it", deviceName)
+		}
+		fingerprint = device.Fingerprint
+	}
 	for _, path := range paths {
 		app.transfers = append(app.transfers, Transfer{
-			ID:      len(app.transfers) + 1,
-			Name:    filepath.Base(path),
-			Device:  deviceName,
-			Status:  StatusQueued,
-			path:    path,
-			address: address,
+			ID:          len(app.transfers) + 1,
+			Name:        filepath.Base(path),
+			Device:      deviceName,
+			Status:      StatusQueued,
+			path:        path,
+			address:     address,
+			fingerprint: fingerprint,
 		})
 	}
 	startWorker := len(paths) > 0 && app.claimWorker()
@@ -84,14 +98,14 @@ func (app *App) SendFiles(deviceName string, paths []string) error {
 	return nil
 }
 
-// addressOf must be called with app.mu held.
-func (app *App) addressOf(deviceName string) (string, error) {
+// deviceNamed must be called with app.mu held.
+func (app *App) deviceNamed(deviceName string) (discovery.Device, error) {
 	for _, device := range app.devices {
 		if device.Name == deviceName {
-			return net.JoinHostPort(device.Host, strconv.Itoa(device.Port)), nil
+			return device, nil
 		}
 	}
-	return "", fmt.Errorf("device %q was not found on the network", deviceName)
+	return discovery.Device{}, fmt.Errorf("device %q was not found on the network", deviceName)
 }
 
 // Pause stops a queued or in-flight transfer. Resume continues it from what
@@ -186,7 +200,7 @@ func (app *App) sendQueued() {
 		app.notifyTransfers(snapshot)
 
 		tracker := &progressTracker{}
-		err := app.options.Sender.Send(ctx, current.address, current.path, func(sent, total int64) {
+		err := app.options.Sender.Send(ctx, current.address, current.fingerprint, current.path, func(sent, total int64) {
 			app.recordProgress(current.ID, tracker, sent, total)
 		})
 		if err != nil && ctx.Err() == nil {

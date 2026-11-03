@@ -20,7 +20,7 @@ func TestSenderDeliversFileToBackend(t *testing.T) {
 	}
 
 	sender := transfer.Sender{ChunkSize: 64 * 1024}
-	if err := sender.Send(context.Background(), testBackend.Addr(), path, nil); err != nil {
+	if err := sender.Send(context.Background(), testBackend.Addr(), "", path, nil); err != nil {
 		t.Fatalf("Send: %v", err)
 	}
 
@@ -39,7 +39,7 @@ func TestSenderResumesAnInterruptedUpload(t *testing.T) {
 	sender := transfer.Sender{ChunkSize: 64 * 1024}
 
 	ctx, cancel := context.WithCancel(context.Background())
-	err := sender.Send(ctx, testBackend.Addr(), path, func(sent, _ int64) {
+	err := sender.Send(ctx, testBackend.Addr(), "", path, func(sent, _ int64) {
 		if sent > 150_000 {
 			cancel()
 		}
@@ -51,7 +51,7 @@ func TestSenderResumesAnInterruptedUpload(t *testing.T) {
 		t.Fatalf("received %d bytes before resuming, want a partial file", len(partial))
 	}
 
-	if err := sender.Send(context.Background(), testBackend.Addr(), path, nil); err != nil {
+	if err := sender.Send(context.Background(), testBackend.Addr(), "", path, nil); err != nil {
 		t.Fatalf("resumed Send: %v", err)
 	}
 

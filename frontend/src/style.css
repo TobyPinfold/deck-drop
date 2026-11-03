@@ -267,3 +267,59 @@ header p {
     align-items: center;
     gap: 24px;
 }
+
+.tile-badge {
+    font-size: 14px;
+    color: var(--muted);
+}
+
+.tile[aria-pressed="true"] .tile-badge {
+    color: #dff1ff;
+}
+
+h3 {
+    margin: 24px 0 12px;
+    font-size: 18px;
+    color: var(--muted);
+}
+
+.code {
+    margin: 0;
+    font-size: 40px;
+    font-weight: 700;
+    letter-spacing: 0.3em;
+    font-variant-numeric: tabular-nums;
+}
+
+.pairing-entry {
+    flex-direction: column;
+    align-items: stretch;
+}
+
+.keypad {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+}
+
+.keypad .action {
+    padding: 16px 0;
+    font-size: 24px;
+}
+
+.paired {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.paired li {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    font-size: 20px;
+}
