@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
 	"path/filepath"
 )
@@ -64,6 +65,24 @@ func (receiver *Receiver) WriteChunk(name string, offset int64, chunk io.Reader)
 		return written, fmt.Errorf("close %q: %w", name, closeErr)
 	}
 	return written, nil
+}
+
+// Size returns how many bytes of the named file have been received, or zero
+// if nothing has been received yet. Chunks are expected in order, so the size
+// is the offset a sender should resume from.
+func (receiver *Receiver) Size(name string) (int64, error) {
+	if !isPlainFileName(name) {
+		return 0, ErrInvalidName
+	}
+
+	info, err := receiver.root.Stat(name)
+	if errors.Is(err, fs.ErrNotExist) {
+		return 0, nil
+	}
+	if err != nil {
+		return 0, fmt.Errorf("stat %q: %w", name, err)
+	}
+	return info.Size(), nil
 }
 
 // Close releases the receive directory.
