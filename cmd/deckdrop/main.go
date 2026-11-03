@@ -11,18 +11,18 @@ import (
 
 func main() {
 	logger := slog.New(slog.NewTextHandler(os.Stderr, nil))
-	b := backend.New(logger)
+	backendService := backend.New(logger)
 
-	if err := b.Start(); err != nil {
+	if err := backendService.Start(); err != nil {
 		logger.Error("failed to start backend", "error", err)
 		os.Exit(1)
 	}
 
-	sig := make(chan os.Signal, 1)
-	signal.Notify(sig, os.Interrupt, syscall.SIGTERM)
-	<-sig
+	shutdownSignals := make(chan os.Signal, 1)
+	signal.Notify(shutdownSignals, os.Interrupt, syscall.SIGTERM)
+	<-shutdownSignals
 
-	if err := b.Stop(); err != nil {
+	if err := backendService.Stop(); err != nil {
 		logger.Error("failed to stop backend", "error", err)
 		os.Exit(1)
 	}

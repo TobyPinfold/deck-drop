@@ -21,34 +21,34 @@ func New(logger *slog.Logger) *Backend {
 }
 
 // Start brings the backend up. It returns an error if already running.
-func (b *Backend) Start() error {
-	b.mu.Lock()
-	defer b.mu.Unlock()
+func (backend *Backend) Start() error {
+	backend.mu.Lock()
+	defer backend.mu.Unlock()
 
-	if b.running {
+	if backend.running {
 		return errors.New("backend already running")
 	}
-	b.running = true
-	b.log.Info("backend started")
+	backend.running = true
+	backend.log.Info("backend started")
 	return nil
 }
 
 // Stop shuts the backend down. It is a no-op if not running.
-func (b *Backend) Stop() error {
-	b.mu.Lock()
-	defer b.mu.Unlock()
+func (backend *Backend) Stop() error {
+	backend.mu.Lock()
+	defer backend.mu.Unlock()
 
-	if !b.running {
+	if !backend.running {
 		return nil
 	}
-	b.running = false
-	b.log.Info("backend stopped")
+	backend.running = false
+	backend.log.Info("backend stopped")
 	return nil
 }
 
 // Running reports whether the backend is currently started.
-func (b *Backend) Running() bool {
-	b.mu.Lock()
-	defer b.mu.Unlock()
-	return b.running
+func (backend *Backend) Running() bool {
+	backend.mu.Lock()
+	defer backend.mu.Unlock()
+	return backend.running
 }
