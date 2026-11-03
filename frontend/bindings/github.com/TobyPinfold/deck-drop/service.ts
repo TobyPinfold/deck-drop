@@ -17,6 +17,9 @@ import * as app$0 from "./internal/app/models.js";
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
 import * as discovery$0 from "./internal/discovery/models.js";
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore: Unused imports
+import * as settings$0 from "./internal/settings/models.js";
 
 /**
  * ChooseFiles asks the user to pick files and returns their paths. It returns
@@ -24,6 +27,14 @@ import * as discovery$0 from "./internal/discovery/models.js";
  */
 export function ChooseFiles(): $CancellablePromise<string[] | null> {
     return $Call.ByID(455073519);
+}
+
+/**
+ * ChooseFolder asks the user to pick a folder and returns its path. It
+ * returns an empty string if the user cancels.
+ */
+export function ChooseFolder(): $CancellablePromise<string> {
+    return $Call.ByID(240412436);
 }
 
 /**
@@ -76,10 +87,25 @@ export function ResumeTransfer(id: number): $CancellablePromise<void> {
 }
 
 /**
+ * SaveSettings applies and saves new settings. The backend restarts, so a
+ * taken port is reported as an error.
+ */
+export function SaveSettings(updated: settings$0.Settings): $CancellablePromise<void> {
+    return $Call.ByID(1745303205, updated);
+}
+
+/**
  * SendFiles queues the files at paths to be sent to the named device.
  */
 export function SendFiles(deviceName: string, paths: string[] | null): $CancellablePromise<void> {
     return $Call.ByID(2706696230, deviceName, paths);
+}
+
+/**
+ * Settings returns the settings the app is running with.
+ */
+export function Settings(): $CancellablePromise<settings$0.Settings> {
+    return $Call.ByID(4034091128);
 }
 
 /**
