@@ -19,6 +19,7 @@ type App struct {
 	backend    *backend.Backend
 	options    Options
 	selfName   string
+	receiveDir string
 	startError string
 
 	mu        sync.Mutex
@@ -76,6 +77,7 @@ func New(logger *slog.Logger, config backend.Config, options Options) *App {
 		backend:     backend.New(logger, config),
 		options:     options,
 		selfName:    discovery.InstanceName(config.DeviceName),
+		receiveDir:  config.ReceiveDir,
 		sendContext: sendContext,
 		stopSending: stopSending,
 		cancels:     make(map[int]context.CancelFunc),

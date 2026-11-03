@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"syscall"
 	"time"
 
@@ -82,6 +83,29 @@ func (service *service) PauseTransfer(id int) error {
 // ResumeTransfer continues a paused or failed transfer.
 func (service *service) ResumeTransfer(id int) error {
 	return service.app.Resume(id)
+}
+
+// ReceivedFiles lists the files that have been received, newest first.
+func (service *service) ReceivedFiles() ([]app.ReceivedFile, error) {
+	return service.app.ReceivedFiles()
+}
+
+// ReceiveDir is the folder received files are saved to.
+func (service *service) ReceiveDir() string {
+	directory, err := filepath.Abs(service.app.ReceiveDir())
+	if err != nil {
+		return service.app.ReceiveDir()
+	}
+	return directory
+}
+
+// OpenReceiveFolder shows the receive folder in the system file manager.
+func (service *service) OpenReceiveFolder() error {
+	directory := service.ReceiveDir()
+	if err := os.MkdirAll(directory, 0o755); err != nil {
+		return err
+	}
+	return service.desktop.Browser.OpenFile(directory)
 }
 
 // ChooseFiles asks the user to pick files and returns their paths. It returns

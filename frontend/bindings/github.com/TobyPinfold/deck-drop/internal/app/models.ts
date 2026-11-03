@@ -11,6 +11,15 @@ export interface Info {
 }
 
 /**
+ * ReceivedFile is a file in the receive directory.
+ */
+export interface ReceivedFile {
+    "name": string;
+    "size": number;
+    "modified": string;
+}
+
+/**
  * Transfer is one file queued to be sent to a device.
  */
 export interface Transfer {

@@ -197,3 +197,20 @@ h2 {
 .transfer[data-status="paused"] .bar-fill {
     background: var(--muted);
 }
+
+.received {
+    margin: 20px 0 0;
+    padding: 0;
+    list-style: none;
+}
+
+.received-file {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 14px 20px;
+    margin-bottom: 8px;
+    border-radius: 10px;
+    background: var(--tile);
+    font-size: 18px;
+}
