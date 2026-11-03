@@ -1,10 +1,16 @@
 package backend
 
-import "net/http"
+import (
+	"log/slog"
+	"net/http"
 
-func newRouter() http.Handler {
+	"github.com/TobyPinfold/deck-drop/internal/transfer"
+)
+
+func newRouter(receiver *transfer.Receiver, logger *slog.Logger) http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /health", handleHealth)
+	mux.Handle("POST /upload", uploadHandler{receiver: receiver, log: logger})
 	return mux
 }
 
