@@ -45,7 +45,7 @@ func freePort(t *testing.T) int {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer listener.Close()
+	defer func() { _ = listener.Close() }()
 	return listener.Addr().(*net.TCPAddr).Port
 }
 
@@ -91,7 +91,7 @@ func TestSaveSettingsKeepsTheOldConfigurationWhenThePortIsTaken(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer taken.Close()
+	defer func() { _ = taken.Close() }()
 	changed := before
 	changed.Port = taken.Addr().(*net.TCPAddr).Port
 
