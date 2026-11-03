@@ -24,10 +24,19 @@ type Registration struct {
 	closeOnce sync.Once
 }
 
-// Announce advertises an instance of the DeckDrop service on port.
+// fingerprintKey is the TXT record key carrying a device's certificate
+// fingerprint.
+const fingerprintKey = "fp="
+
+// Announce advertises an instance of the DeckDrop service on port, with the
+// device's certificate fingerprint if it has one.
 // Call Close to stop the announcement.
-func Announce(instance string, port int) (*Registration, error) {
-	server, err := zeroconf.Register(InstanceName(instance), ServiceType, serviceDomain, port, []string{"path=/upload"}, nil)
+func Announce(instance string, port int, fingerprint string) (*Registration, error) {
+	text := []string{"path=/upload"}
+	if fingerprint != "" {
+		text = append(text, fingerprintKey+fingerprint)
+	}
+	server, err := zeroconf.Register(InstanceName(instance), ServiceType, serviceDomain, port, text, nil)
 	if err != nil {
 		return nil, fmt.Errorf("register mDNS service: %w", err)
 	}
@@ -44,8 +53,8 @@ func (registration *Registration) Close() error {
 type MDNS struct{}
 
 // Announce advertises instance on port and returns a Closer that stops it.
-func (MDNS) Announce(instance string, port int) (io.Closer, error) {
-	registration, err := Announce(instance, port)
+func (MDNS) Announce(instance string, port int, fingerprint string) (io.Closer, error) {
+	registration, err := Announce(instance, port, fingerprint)
 	if err != nil {
 		return nil, err
 	}
@@ -106,5 +115,11 @@ func deviceFromEntry(entry *zeroconf.ServiceEntry) (Device, bool) {
 	default:
 		return Device{}, false
 	}
-	return Device{Name: entry.Instance, Host: host, Port: entry.Port}, true
+	device := Device{Name: entry.Instance, Host: host, Port: entry.Port}
+	for _, record := range entry.Text {
+		if fingerprint, ok := strings.CutPrefix(record, fingerprintKey); ok {
+			device.Fingerprint = fingerprint
+		}
+	}
+	return device, true
 }

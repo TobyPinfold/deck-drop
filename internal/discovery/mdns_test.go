@@ -39,7 +39,7 @@ func TestAnnounceMakesServiceDiscoverable(t *testing.T) {
 	const instance = "deckdrop-test-discoverable"
 	const port = 45678
 
-	registration, err := Announce(instance, port)
+	registration, err := Announce(instance, port, "")
 	if err != nil {
 		t.Fatalf("Announce: %v", err)
 	}
@@ -58,7 +58,7 @@ func TestAnnounceMakesServiceDiscoverable(t *testing.T) {
 func TestCloseStopsAnnouncement(t *testing.T) {
 	const instance = "deckdrop-test-closed"
 
-	registration, err := Announce(instance, 45679)
+	registration, err := Announce(instance, 45679, "")
 	if err != nil {
 		t.Fatalf("Announce: %v", err)
 	}
@@ -72,7 +72,7 @@ func TestCloseStopsAnnouncement(t *testing.T) {
 }
 
 func TestCloseIsIdempotent(t *testing.T) {
-	registration, err := Announce("deckdrop-test-idempotent", 45680)
+	registration, err := Announce("deckdrop-test-idempotent", 45680, "")
 	if err != nil {
 		t.Fatalf("Announce: %v", err)
 	}
@@ -89,7 +89,7 @@ func TestMDNSAnnouncerAnnouncesInstance(t *testing.T) {
 	const instance = "deckdrop-test-announcer"
 	const port = 45681
 
-	closer, err := MDNS{}.Announce(instance, port)
+	closer, err := MDNS{}.Announce(instance, port, "")
 	if err != nil {
 		t.Fatalf("Announce: %v", err)
 	}
@@ -103,7 +103,7 @@ func TestMDNSAnnouncerAnnouncesInstance(t *testing.T) {
 func TestAnnounceMakesDottedInstanceNameDiscoverable(t *testing.T) {
 	const port = 45682
 
-	registration, err := Announce("my.deck.local", port)
+	registration, err := Announce("my.deck.local", port, "")
 	if err != nil {
 		t.Fatalf("Announce: %v", err)
 	}
@@ -118,7 +118,7 @@ func TestMDNSScannerFindsAnnouncedDevices(t *testing.T) {
 	const instance = "deckdrop-test-scanned"
 	const port = 45681
 
-	registration, err := Announce(instance, port)
+	registration, err := Announce(instance, port, "")
 	if err != nil {
 		t.Fatalf("Announce: %v", err)
 	}

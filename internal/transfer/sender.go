@@ -10,14 +10,30 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+
+	"github.com/TobyPinfold/deck-drop/internal/identity"
 )
 
 const defaultChunkSize = 8 << 20
 
+// PinSource looks up the pinned certificate fingerprint of the device at
+// address ("host:port"). It returns an empty string for an unknown device.
+type PinSource interface {
+	Fingerprint(address string) string
+}
+
 // Sender uploads files to another DeckDrop device in chunks.
 type Sender struct {
-	// Client performs the requests. It defaults to http.DefaultClient.
+	// Client performs the requests. It overrides Secure and Pins.
 	Client *http.Client
+
+	// Secure connects over HTTPS. Without it (and without Client) the sender
+	// uses plain HTTP, which is only meant for tests.
+	Secure bool
+
+	// Pins says which certificate fingerprint a device must present. Nil, or
+	// an empty fingerprint, accepts any certificate.
+	Pins PinSource
 
 	// ChunkSize is the largest number of bytes sent per request. It must not
 	// exceed the receiver's chunk limit. It defaults to 8 MiB.
@@ -48,9 +64,11 @@ func (sender Sender) Send(ctx context.Context, address, path string, progress fu
 
 	name := filepath.Base(path)
 	size := info.Size()
-	baseURL := "http://" + address
+	baseURL := sender.scheme() + "://" + address
+	client := sender.clientFor(address)
+	defer client.CloseIdleConnections()
 
-	offset, err := sender.receivedSize(ctx, baseURL, name)
+	offset, err := sender.receivedSize(ctx, client, baseURL, name)
 	if err != nil {
 		return err
 	}
@@ -77,7 +95,7 @@ func (sender Sender) Send(ctx context.Context, address, path string, progress fu
 			total:    size,
 			progress: progress,
 		}
-		if err := sender.uploadChunk(ctx, baseURL, name, offset, length, chunk); err != nil {
+		if err := sender.uploadChunk(ctx, client, baseURL, name, offset, length, chunk); err != nil {
 			return err
 		}
 		offset += length
@@ -85,14 +103,14 @@ func (sender Sender) Send(ctx context.Context, address, path string, progress fu
 	return nil
 }
 
-func (sender Sender) receivedSize(ctx context.Context, baseURL, name string) (int64, error) {
+func (sender Sender) receivedSize(ctx context.Context, client *http.Client, baseURL, name string) (int64, error) {
 	query := "?filename=" + url.QueryEscape(name)
 	request, err := http.NewRequestWithContext(ctx, http.MethodGet, baseURL+"/status"+query, nil)
 	if err != nil {
 		return 0, fmt.Errorf("build status request: %w", err)
 	}
 
-	response, err := sender.client().Do(request)
+	response, err := client.Do(request)
 	if err != nil {
 		return 0, fmt.Errorf("check progress of %q: %w", name, err)
 	}
@@ -108,7 +126,7 @@ func (sender Sender) receivedSize(ctx context.Context, baseURL, name string) (in
 	return offset, nil
 }
 
-func (sender Sender) uploadChunk(ctx context.Context, baseURL, name string, offset, length int64, chunk io.Reader) error {
+func (sender Sender) uploadChunk(ctx context.Context, client *http.Client, baseURL, name string, offset, length int64, chunk io.Reader) error {
 	if length == 0 {
 		chunk = http.NoBody
 	}
@@ -120,7 +138,7 @@ func (sender Sender) uploadChunk(ctx context.Context, baseURL, name string, offs
 	request.Header.Set("X-File-Name", name)
 	request.Header.Set("X-File-Offset", strconv.FormatInt(offset, 10))
 
-	response, err := sender.client().Do(request)
+	response, err := client.Do(request)
 	if err != nil {
 		return fmt.Errorf("upload %q at %d: %w", name, offset, err)
 	}
@@ -132,11 +150,25 @@ func (sender Sender) uploadChunk(ctx context.Context, baseURL, name string, offs
 	return nil
 }
 
-func (sender Sender) client() *http.Client {
+func (sender Sender) scheme() string {
+	if sender.Secure {
+		return "https"
+	}
+	return "http"
+}
+
+func (sender Sender) clientFor(address string) *http.Client {
 	if sender.Client != nil {
 		return sender.Client
 	}
-	return http.DefaultClient
+	if !sender.Secure {
+		return http.DefaultClient
+	}
+	pin := ""
+	if sender.Pins != nil {
+		pin = sender.Pins.Fingerprint(address)
+	}
+	return &http.Client{Transport: &http.Transport{TLSClientConfig: identity.ClientConfig(pin)}}
 }
 
 // progressReader reports how much of the file has been read as it is uploaded.

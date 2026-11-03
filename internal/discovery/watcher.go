@@ -17,6 +17,10 @@ type Device struct {
 	Name string `json:"name"`
 	Host string `json:"host"`
 	Port int    `json:"port"`
+
+	// Fingerprint is the device's advertised certificate fingerprint. It is
+	// not trustworthy until confirmed by pairing.
+	Fingerprint string `json:"fingerprint"`
 }
 
 // Scanner finds the DeckDrop devices currently on the network.

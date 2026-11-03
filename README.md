@@ -47,7 +47,7 @@ The root package wires the Wails desktop application; `cmd/deckdrop` is the head
 
 ## HTTP API
 
-Files are sent in chunks so interrupted transfers can resume.
+Files are sent in chunks so interrupted transfers can resume. The server speaks HTTPS only (TLS 1.3); see [Security](#security).
 
 | Endpoint                   | Description                                                                                             |
 | -------------------------- | ------------------------------------------------------------------------------------------------------- |
@@ -58,11 +58,23 @@ Files are sent in chunks so interrupted transfers can resume.
 Uploads over the maximum chunk size (64 MiB) are rejected with 413. Invalid file names are rejected with 400.
 
 ```sh
-curl -X POST --data-binary @photo.jpg \
+curl -k -X POST --data-binary @photo.jpg \
   -H 'X-File-Name: photo.jpg' -H 'X-File-Offset: 0' \
-  http://localhost:8080/upload
-curl -i 'http://localhost:8080/status?filename=photo.jpg'
+  https://localhost:8080/upload
+curl -ki 'https://localhost:8080/status?filename=photo.jpg'
 ```
+
+`-k` is needed because the certificate is self-signed.
+
+## Security
+
+Each device creates a self-signed certificate the first time it runs (`identity.crt` and `identity.key` in the config folder; the key is readable only by you). Its SHA-256 fingerprint identifies the device and is advertised in the mDNS `fp=` record. All transfers are encrypted with TLS 1.3.
+
+Trust model and limits:
+
+- There is no certificate authority. A sender checks that a device's certificate matches the fingerprint it has pinned for it.
+- Until a device is paired and pinned, connections are encrypted but the other device is not authenticated, so an active attacker on the network could impersonate it. The advertised fingerprint is not trusted for this, because anyone can announce anything over mDNS.
+- Deleting the identity files gives the device a new identity, which devices that pinned the old one will reject.
 
 ## Configuration
 

@@ -4,6 +4,7 @@ package backend
 
 import (
 	"context"
+	"crypto/tls"
 	"errors"
 	"fmt"
 	"io"
@@ -77,7 +78,11 @@ func (backend *Backend) Start() error {
 	backend.receiver = receiver
 	backend.served = make(chan struct{})
 
-	go backend.serve(server, listener, backend.served)
+	serving := listener
+	if backend.config.Identity != nil {
+		serving = tls.NewListener(listener, backend.config.Identity.ServerConfig())
+	}
+	go backend.serve(server, serving, backend.served)
 	backend.announce()
 
 	backend.log.Info("backend started", "addr", listener.Addr().String(), "dir", backend.config.ReceiveDir)
@@ -163,7 +168,11 @@ func (backend *Backend) announce() {
 	}
 
 	port := backend.listener.Addr().(*net.TCPAddr).Port
-	announcement, err := backend.config.Announcer.Announce(backend.config.DeviceName, port)
+	fingerprint := ""
+	if backend.config.Identity != nil {
+		fingerprint = backend.config.Identity.Fingerprint()
+	}
+	announcement, err := backend.config.Announcer.Announce(backend.config.DeviceName, port, fingerprint)
 	if err != nil {
 		backend.log.Warn("failed to announce device on the network", "error", err)
 		return
