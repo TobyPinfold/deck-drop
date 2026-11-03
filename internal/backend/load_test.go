@@ -12,7 +12,9 @@ func loadConfig(t *testing.T, args []string, environment map[string]string) (Con
 
 	for _, name := range []string{portEnvironmentVariable, receiveDirEnvironmentVariable, deviceNameEnvironmentVariable} {
 		t.Setenv(name, "") // registers restoring the original value
-		os.Unsetenv(name)
+		if err := os.Unsetenv(name); err != nil {
+			t.Fatalf("Unsetenv(%s): %v", name, err)
+		}
 	}
 	for name, value := range environment {
 		t.Setenv(name, value)
