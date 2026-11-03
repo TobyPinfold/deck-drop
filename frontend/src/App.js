@@ -1,0 +1,71 @@
+import {useEffect, useState} from 'preact/hooks';
+import {Events} from '@wailsio/runtime';
+import {Devices as ListDevices, Info, Transfers as ListTransfers} from '../bindings/github.com/TobyPinfold/deck-drop/service.js';
+import {Devices} from './components/Devices.js';
+import {Received} from './components/Received.js';
+import {Send} from './components/Send.js';
+import {Settings} from './components/Settings.js';
+import {Transfers} from './components/Transfers.js';
+import {html} from './html.js';
+import {startNavigation} from './input.js';
+
+// Subscribes to a backend event and loads the initial value.
+function useBackendList(eventName, load) {
+    const [items, setItems] = useState([]);
+    useEffect(() => {
+        load().then((initial) => setItems((current) => (current.length === 0 ? initial ?? [] : current)));
+        return Events.On(eventName, (event) => setItems(event.data ?? []));
+    }, []);
+    return items;
+}
+
+function useStatus(settingsVersion) {
+    const [status, setStatus] = useState('Starting…');
+    useEffect(() => {
+        Info().then((info) => setStatus(info.running
+            ? `Receiving on port ${info.port}`
+            : `Backend not running: ${info.error}`));
+    }, [settingsVersion]);
+    return status;
+}
+
+export function App() {
+    const devices = useBackendList('devices', ListDevices);
+    const transfers = useBackendList('transfers', ListTransfers);
+    const [requestedName, setRequestedName] = useState(null);
+    const [hint, setHint] = useState('Select a device, then choose or drop files to send.');
+    const [settingsVersion, setSettingsVersion] = useState(0);
+    const status = useStatus(settingsVersion);
+
+    // A device that disappears is no longer selected.
+    const selectedName = devices.some((device) => device.name === requestedName) ? requestedName : null;
+
+    // B goes back to the device list, which is where every send starts.
+    useEffect(() => {
+        startNavigation({
+            onBack: () => {
+                const tiles = [...document.querySelectorAll('.tile')];
+                const target = tiles.find((tile) => tile.getAttribute('aria-pressed') === 'true') ?? tiles[0];
+                target?.focus();
+                window.scrollTo({top: 0});
+            },
+        });
+    }, []);
+
+    return html`
+        <header>
+            <h1>DeckDrop</h1>
+            <p>${status}</p>
+        </header>
+        <main class="columns">
+            <div class="column">
+                <${Devices} devices=${devices} selectedName=${selectedName} onSelect=${setRequestedName} />
+                <${Send} selectedName=${selectedName} hint=${hint} setHint=${setHint} />
+            </div>
+            <div class="column">
+                <${Transfers} transfers=${transfers} setHint=${setHint} />
+                <${Received} settingsVersion=${settingsVersion} />
+                <${Settings} onSaved=${() => setSettingsVersion((version) => version + 1)} />
+            </div>
+        </main>`;
+}

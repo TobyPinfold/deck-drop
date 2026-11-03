@@ -28,7 +28,7 @@ h2 {
     letter-spacing: 0.08em;
 }
 
-#status {
+header p {
     margin: 4px 0 0;
     color: var(--muted);
 }
