@@ -43,7 +43,7 @@ jobs:
           node-version: lts/*
       - name: Install Linux build dependencies
         if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev
+        run: sudo apt-get update && sudo apt-get install -y libgtk-4-dev libwebkitgtk-6.0-dev
       - run: go install github.com/wailsapp/wails/v3/cmd/wails3@v3.0.0
       - name: Add Go binaries to PATH
         shell: bash
@@ -58,7 +58,7 @@ jobs:
         with:
           go-version: stable
       - name: Install build dependencies for the desktop app package
-        run: sudo apt-get update && sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev
+        run: sudo apt-get update && sudo apt-get install -y libgtk-4-dev libwebkitgtk-6.0-dev
       - uses: golangci/golangci-lint-action@v8
         with:
           version: latest

@@ -3,3 +3,6 @@ version: "2"
 formatters:
   enable:
     - gofmt
+  exclusions:
+    paths:
+      - build
