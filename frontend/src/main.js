@@ -2,7 +2,8 @@ import './style.css';
 import {startNavigation} from './input.js';
 import {Events} from '@wailsio/runtime';
 import {
-    ChooseFiles, Devices, Info, OpenReceiveFolder, PauseTransfer, ReceiveDir, ReceivedFiles, ResumeTransfer, SendFiles, Transfers,
+    ChooseFiles, ChooseFolder, Devices, Info, OpenReceiveFolder, PauseTransfer, ReceiveDir, ReceivedFiles, ResumeTransfer, SaveSettings,
+    SendFiles, Settings, Transfers,
 } from '../bindings/github.com/TobyPinfold/deck-drop/service.js';
 
 const status = document.querySelector('#status');
@@ -16,6 +17,12 @@ const openFolderButton = document.querySelector('#open-folder');
 const receiveDirLabel = document.querySelector('#receive-dir');
 const receivedList = document.querySelector('#received');
 const receivedEmpty = document.querySelector('#received-empty');
+const settingsForm = document.querySelector('#settings');
+const nameInput = document.querySelector('#setting-name');
+const portInput = document.querySelector('#setting-port');
+const folderLabel = document.querySelector('#setting-dir');
+const chooseFolderButton = document.querySelector('#choose-folder');
+const settingsMessage = document.querySelector('#settings-message');
 
 const receivedRefreshMs = 2000;
 
@@ -179,11 +186,14 @@ async function sendFiles(paths) {
 
 chooseButton.addEventListener('click', async () => sendFiles(await ChooseFiles()));
 
-Info().then((info) => {
-    status.textContent = info.running
-        ? `Receiving on port ${info.port}`
-        : `Backend not running: ${info.error}`;
-});
+function refreshInfo() {
+    return Info().then((info) => {
+        status.textContent = info.running
+            ? `Receiving on port ${info.port}`
+            : `Backend not running: ${info.error}`;
+    });
+}
+refreshInfo();
 
 Events.On('devices', (event) => renderDevices(event.data ?? []));
 Events.On('transfers', (event) => renderTransfers(event.data ?? []));
@@ -225,11 +235,46 @@ openFolderButton.addEventListener('click', () => {
     });
 });
 
-ReceiveDir().then((directory) => {
-    receiveDirLabel.textContent = directory;
-});
+function refreshReceiveDir() {
+    return ReceiveDir().then((directory) => {
+        receiveDirLabel.textContent = directory;
+    });
+}
+refreshReceiveDir();
 refreshReceived();
 setInterval(refreshReceived, receivedRefreshMs);
+
+let receiveFolder = '';
+
+function showSettings(settings) {
+    nameInput.value = settings.deviceName;
+    portInput.value = settings.port;
+    receiveFolder = settings.receiveDir;
+    folderLabel.textContent = settings.receiveDir;
+}
+
+chooseFolderButton.addEventListener('click', async () => {
+    const folder = await ChooseFolder();
+    if (folder) {
+        receiveFolder = folder;
+        folderLabel.textContent = folder;
+    }
+});
+
+settingsForm.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    settingsMessage.textContent = 'Saving…';
+    try {
+        await SaveSettings({deviceName: nameInput.value, receiveDir: receiveFolder, port: Number(portInput.value)});
+        settingsMessage.textContent = 'Saved';
+        await Promise.all([refreshInfo(), refreshReceiveDir()]);
+        refreshReceived();
+    } catch (error) {
+        settingsMessage.textContent = `Could not save: ${error.message ?? error}`;
+    }
+});
+
+Settings().then(showSettings);
 
 // B goes back to the device list, which is where every send starts.
 startNavigation({
