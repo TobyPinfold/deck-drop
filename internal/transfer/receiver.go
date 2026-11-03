@@ -7,7 +7,6 @@ import (
 	"io"
 	"io/fs"
 	"os"
-	"path/filepath"
 )
 
 const (
@@ -88,8 +87,4 @@ func (receiver *Receiver) Size(name string) (int64, error) {
 // Close releases the receive directory.
 func (receiver *Receiver) Close() error {
 	return receiver.root.Close()
-}
-
-func isPlainFileName(name string) bool {
-	return name != "." && filepath.IsLocal(name) && filepath.Base(name) == name
 }
