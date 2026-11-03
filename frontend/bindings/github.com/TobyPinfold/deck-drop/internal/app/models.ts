@@ -19,4 +19,11 @@ export interface Transfer {
     "device": string;
     "status": string;
     "error": string;
+
+    /**
+     * Sent and Total are in bytes; Speed is in bytes per second.
+     */
+    "sent": number;
+    "total": number;
+    "speed": number;
 }

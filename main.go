@@ -25,6 +25,8 @@ const (
 	scanDuration = 3 * time.Second
 	scanInterval = 2 * time.Second
 
+	progressInterval = 200 * time.Millisecond
+
 	devicesEvent      = "devices"
 	transfersEvent    = "transfers"
 	filesDroppedEvent = "files-dropped"
@@ -70,6 +72,16 @@ func (service *service) Transfers() []app.Transfer {
 // SendFiles queues the files at paths to be sent to the named device.
 func (service *service) SendFiles(deviceName string, paths []string) error {
 	return service.app.SendFiles(deviceName, paths)
+}
+
+// PauseTransfer stops a queued or in-flight transfer.
+func (service *service) PauseTransfer(id int) error {
+	return service.app.Pause(id)
+}
+
+// ResumeTransfer continues a paused or failed transfer.
+func (service *service) ResumeTransfer(id int) error {
+	return service.app.Resume(id)
 }
 
 // ChooseFiles asks the user to pick files and returns their paths. It returns
@@ -119,7 +131,8 @@ func main() {
 		OnDevicesChanged: func(devices []discovery.Device) {
 			desktop.Event.Emit(devicesEvent, devices)
 		},
-		Sender: transfer.Sender{},
+		Sender:           transfer.Sender{},
+		ProgressInterval: progressInterval,
 		OnTransfersChanged: func(transfers []app.Transfer) {
 			desktop.Event.Emit(transfersEvent, transfers)
 		},

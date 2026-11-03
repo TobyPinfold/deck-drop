@@ -62,7 +62,7 @@ func TestSenderSendsFileInChunks(t *testing.T) {
 	path := writeSourceFile(t, "save.bin", content)
 
 	sender := Sender{ChunkSize: 1024}
-	if err := sender.Send(context.Background(), server.Listener.Addr().String(), path); err != nil {
+	if err := sender.Send(context.Background(), server.Listener.Addr().String(), path, nil); err != nil {
 		t.Fatalf("Send: %v", err)
 	}
 
@@ -79,7 +79,7 @@ func TestSenderSendsEmptyFile(t *testing.T) {
 	server, directory := newTestServer(t)
 	path := writeSourceFile(t, "empty.txt", nil)
 
-	if err := (Sender{}).Send(context.Background(), server.Listener.Addr().String(), path); err != nil {
+	if err := (Sender{}).Send(context.Background(), server.Listener.Addr().String(), path, nil); err != nil {
 		t.Fatalf("Send: %v", err)
 	}
 
@@ -106,7 +106,7 @@ func TestSenderResumesFromReceivedOffset(t *testing.T) {
 	defer recording.Close()
 
 	sender := Sender{ChunkSize: 1500}
-	if err := sender.Send(context.Background(), recording.Listener.Addr().String(), path); err != nil {
+	if err := sender.Send(context.Background(), recording.Listener.Addr().String(), path, nil); err != nil {
 		t.Fatalf("Send: %v", err)
 	}
 
@@ -129,7 +129,7 @@ func TestSenderReportsServerRejection(t *testing.T) {
 	defer server.Close()
 	path := writeSourceFile(t, "file.txt", []byte("data"))
 
-	if err := (Sender{}).Send(context.Background(), server.Listener.Addr().String(), path); err == nil {
+	if err := (Sender{}).Send(context.Background(), server.Listener.Addr().String(), path, nil); err == nil {
 		t.Fatal("Send succeeded against a failing server")
 	}
 }
@@ -140,9 +140,40 @@ func TestSenderStopsWhenContextCancelled(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 
-	err := (Sender{}).Send(ctx, server.Listener.Addr().String(), path)
+	err := (Sender{}).Send(ctx, server.Listener.Addr().String(), path, nil)
 
 	if !errors.Is(err, context.Canceled) {
 		t.Errorf("Send error = %v, want context.Canceled", err)
+	}
+}
+
+func TestSenderReportsProgress(t *testing.T) {
+	server, directory := newTestServer(t)
+	content := bytes.Repeat([]byte("0123456789"), 500)
+	path := writeSourceFile(t, "progress.bin", content)
+	if err := os.WriteFile(filepath.Join(directory, "progress.bin"), content[:2000], 0o600); err != nil {
+		t.Fatalf("seed partial file: %v", err)
+	}
+
+	type report struct{ sent, total int64 }
+	var reports []report
+	sender := Sender{ChunkSize: 1000}
+	err := sender.Send(context.Background(), server.Listener.Addr().String(), path, func(sent, total int64) {
+		reports = append(reports, report{sent, total})
+	})
+	if err != nil {
+		t.Fatalf("Send: %v", err)
+	}
+
+	if len(reports) == 0 || reports[0] != (report{2000, 5000}) {
+		t.Fatalf("reports = %v, want to start at the resumed offset 2000 of 5000", reports)
+	}
+	if last := reports[len(reports)-1]; last != (report{5000, 5000}) {
+		t.Errorf("last report = %v, want 5000 of 5000", last)
+	}
+	for index := 1; index < len(reports); index++ {
+		if reports[index].sent < reports[index-1].sent {
+			t.Fatalf("progress went backwards: %v", reports)
+		}
 	}
 }

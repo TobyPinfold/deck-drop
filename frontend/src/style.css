@@ -136,23 +136,64 @@ h2 {
 }
 
 .transfer {
-    display: flex;
-    justify-content: space-between;
-    gap: 16px;
-    padding: 14px 20px;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    gap: 8px 16px;
+    padding: 16px 20px;
     margin-bottom: 8px;
     border-radius: 10px;
     background: var(--tile);
 }
 
-.transfer-status {
+.transfer-name {
+    font-size: 18px;
+    font-weight: 600;
+}
+
+.transfer-status,
+.transfer-detail {
     color: var(--muted);
 }
 
-.transfer.done .transfer-status {
+.bar {
+    grid-column: 1 / -1;
+    height: 8px;
+    border-radius: 4px;
+    background: var(--background);
+    overflow: hidden;
+}
+
+.bar-fill {
+    width: 0;
+    height: 100%;
+    background: var(--accent);
+    transition: width 0.2s linear;
+}
+
+.transfer .action.small {
+    grid-row: 3;
+    grid-column: 2;
+    padding: 8px 24px;
+    font-size: 16px;
+}
+
+.transfer[data-status="done"] .bar-fill {
+    background: #5ee08a;
+}
+
+.transfer[data-status="done"] .transfer-status {
     color: #5ee08a;
 }
 
-.transfer.failed .transfer-status {
+.transfer[data-status="failed"] .bar-fill {
+    background: #ff6b6b;
+}
+
+.transfer[data-status="failed"] .transfer-status {
     color: #ff6b6b;
+}
+
+.transfer[data-status="paused"] .bar-fill {
+    background: var(--muted);
 }

@@ -26,8 +26,12 @@ type Sender struct {
 
 // Send uploads the file at path to the device listening on address
 // ("host:port"). If the device already has part of the file, the upload
-// resumes where it left off.
-func (sender Sender) Send(ctx context.Context, address, path string) error {
+// resumes where it left off. Cancelling ctx stops the upload; sending the same
+// file again continues from what the device received.
+//
+// progress, if not nil, is called with the bytes the device has and the file's
+// total size: first with the resume offset, then as data is sent.
+func (sender Sender) Send(ctx context.Context, address, path string, progress func(sent, total int64)) error {
 	file, err := os.Open(path)
 	if err != nil {
 		return fmt.Errorf("open file: %w", err)
@@ -54,6 +58,11 @@ func (sender Sender) Send(ctx context.Context, address, path string) error {
 		return fmt.Errorf("device already has %d bytes of %q, more than the %d to send", offset, name, size)
 	}
 
+	if progress == nil {
+		progress = func(int64, int64) {}
+	}
+	progress(offset, size)
+
 	chunkSize := sender.ChunkSize
 	if chunkSize <= 0 {
 		chunkSize = defaultChunkSize
@@ -62,7 +71,12 @@ func (sender Sender) Send(ctx context.Context, address, path string) error {
 	// An empty file still needs one request so the device creates it.
 	for sent := false; !sent || offset < size; sent = true {
 		length := min(chunkSize, size-offset)
-		chunk := io.NewSectionReader(file, offset, length)
+		chunk := &progressReader{
+			reader:   io.NewSectionReader(file, offset, length),
+			sent:     offset,
+			total:    size,
+			progress: progress,
+		}
 		if err := sender.uploadChunk(ctx, baseURL, name, offset, length, chunk); err != nil {
 			return err
 		}
@@ -123,4 +137,21 @@ func (sender Sender) client() *http.Client {
 		return sender.Client
 	}
 	return http.DefaultClient
+}
+
+// progressReader reports how much of the file has been read as it is uploaded.
+type progressReader struct {
+	reader   io.Reader
+	sent     int64
+	total    int64
+	progress func(sent, total int64)
+}
+
+func (reader *progressReader) Read(buffer []byte) (int, error) {
+	count, err := reader.reader.Read(buffer)
+	if count > 0 {
+		reader.sent += int64(count)
+		reader.progress(reader.sent, reader.total)
+	}
+	return count, err
 }
