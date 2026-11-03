@@ -113,3 +113,29 @@ func TestAnnounceMakesDottedInstanceNameDiscoverable(t *testing.T) {
 		t.Fatal("dotted instance name should be announced with dots replaced")
 	}
 }
+
+func TestMDNSScannerFindsAnnouncedDevices(t *testing.T) {
+	const instance = "deckdrop-test-scanned"
+	const port = 45681
+
+	registration, err := Announce(instance, port)
+	if err != nil {
+		t.Fatalf("Announce: %v", err)
+	}
+	t.Cleanup(func() { _ = registration.Close() })
+
+	devices, err := MDNSScanner{Duration: 2 * time.Second}.Scan(context.Background())
+	if err != nil {
+		t.Fatalf("Scan: %v", err)
+	}
+
+	for _, device := range devices {
+		if device.Name == instance {
+			if device.Port != port || device.Host == "" {
+				t.Fatalf("device = %+v, want port %d and a host", device, port)
+			}
+			return
+		}
+	}
+	t.Fatalf("announced device not found in %v", devices)
+}

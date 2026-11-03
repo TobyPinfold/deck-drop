@@ -3,10 +3,12 @@
 package discovery
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/libp2p/zeroconf/v2"
 )
@@ -25,7 +27,7 @@ type Registration struct {
 // Announce advertises an instance of the DeckDrop service on port.
 // Call Close to stop the announcement.
 func Announce(instance string, port int) (*Registration, error) {
-	server, err := zeroconf.Register(sanitiseInstance(instance), ServiceType, serviceDomain, port, []string{"path=/upload"}, nil)
+	server, err := zeroconf.Register(InstanceName(instance), ServiceType, serviceDomain, port, []string{"path=/upload"}, nil)
 	if err != nil {
 		return nil, fmt.Errorf("register mDNS service: %w", err)
 	}
@@ -50,8 +52,59 @@ func (MDNS) Announce(instance string, port int) (io.Closer, error) {
 	return registration, nil
 }
 
-// sanitiseInstance replaces dots, which other devices fail to resolve in an
-// instance name.
-func sanitiseInstance(instance string) string {
+// InstanceName is how a device name appears on the network: dots are
+// replaced because other devices fail to resolve them in an instance name.
+func InstanceName(instance string) string {
 	return strings.ReplaceAll(instance, ".", "-")
+}
+
+// MDNSScanner finds devices by browsing for the DeckDrop service over mDNS.
+type MDNSScanner struct {
+	// Duration is how long each scan listens for announcements.
+	Duration time.Duration
+}
+
+// Scan listens for Duration and returns the devices that announced
+// themselves in that time.
+func (scanner MDNSScanner) Scan(ctx context.Context) ([]Device, error) {
+	ctx, cancel := context.WithTimeout(ctx, scanner.Duration)
+	defer cancel()
+
+	entries := make(chan *zeroconf.ServiceEntry)
+	browseDone := make(chan error, 1)
+	go func() {
+		browseDone <- zeroconf.Browse(ctx, ServiceType, serviceDomain, entries)
+	}()
+
+	devices := []Device{}
+	for {
+		select {
+		case entry, open := <-entries:
+			if !open {
+				entries = nil // Browse closes the channel when it finishes
+				continue
+			}
+			if device, ok := deviceFromEntry(entry); ok {
+				devices = append(devices, device)
+			}
+		case err := <-browseDone:
+			if err != nil {
+				return nil, fmt.Errorf("browse mDNS: %w", err)
+			}
+			return devices, nil
+		}
+	}
+}
+
+func deviceFromEntry(entry *zeroconf.ServiceEntry) (Device, bool) {
+	var host string
+	switch {
+	case len(entry.AddrIPv4) > 0:
+		host = entry.AddrIPv4[0].String()
+	case len(entry.AddrIPv6) > 0:
+		host = entry.AddrIPv6[0].String()
+	default:
+		return Device{}, false
+	}
+	return Device{Name: entry.Instance, Host: host, Port: entry.Port}, true
 }
