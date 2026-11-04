@@ -88,10 +88,20 @@ func (service *service) ReceiveDir() string {
 	return directory
 }
 
-// OpenReceiveFolder shows the receive folder in the system file manager.
+// OpenReceiveFolder shows the receive folder in the system file manager, or in
+// a file dialog where there is none.
 func (service *service) OpenReceiveFolder() error {
 	directory := service.ReceiveDir()
 	if err := os.MkdirAll(directory, 0o755); err != nil {
+		return err
+	}
+	// Game Mode on the Steam Deck cannot launch a file manager, but its file
+	// dialogs work, so browse the folder in one of those instead.
+	if os.Getenv("SteamGamepadUI") != "" {
+		_, err := service.desktop.Dialog.OpenFile().
+			SetTitle("Received files").
+			SetDirectory(directory).
+			PromptForSingleSelection()
 		return err
 	}
 	return service.desktop.Browser.OpenFile(directory)
