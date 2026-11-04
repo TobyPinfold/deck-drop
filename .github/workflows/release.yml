@@ -22,6 +22,10 @@ jobs:
             name: linux
             command: wails3 task linux:create:appimage
             artifacts: bin/*.AppImage
+          - os: ubuntu-24.04-arm
+            name: linux-arm64
+            command: wails3 task linux:create:appimage
+            artifacts: bin/*.AppImage
           - os: macos-latest
             name: macos
             command: wails3 task darwin:package && ditto -c -k --keepParent bin/deckdrop.app bin/deckdrop-macos.zip
