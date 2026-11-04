@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {appendDigit, errorMessage, formatBytes, transferDetailText, transferPercent, transferStatusText, secondsLeft, offerSummary} from './format.js';
+import {activeDownloads, appendDigit, errorMessage, formatBytes, transferDetailText, transferPercent, transferStatusText, secondsLeft, offerSummary} from './format.js';
 
 test('formatBytes uses decimal units', () => {
     assert.equal(formatBytes(999), '999 B');
@@ -46,4 +46,14 @@ test('secondsLeft counts down and never goes negative', () => {
 test('offerSummary names a single file and counts several', () => {
     assert.equal(offerSummary({count: 1, bytes: 1500, names: ['a.sav']}), 'a.sav (1.5 KB)');
     assert.equal(offerSummary({count: 3, bytes: 3000, names: ['a', 'b', 'c']}), '3 files (3.0 KB)');
+});
+
+test('activeDownloads counts only files currently coming in', () => {
+    const transfers = [
+        {direction: 'receive', status: 'receiving'},
+        {direction: 'receive', status: 'receiving'},
+        {direction: 'receive', status: 'done'},
+        {direction: 'send', status: 'sending'},
+    ];
+    assert.equal(activeDownloads(transfers), 2);
 });

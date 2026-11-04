@@ -13,12 +13,26 @@ export function Offers({offers}) {
         accept.current?.focus();
     }, [current?.id]);
 
+    // Return to what had focus before the first offer appeared.
+    const opener = useRef(null);
+    useEffect(() => {
+        if (current && !opener.current) {
+            opener.current = document.activeElement;
+        }
+        if (!current && opener.current) {
+            const previous = opener.current;
+            opener.current = null;
+            requestAnimationFrame(() => previous.isConnected && previous.focus());
+        }
+    }, [current === undefined]);
+
     if (!current) {
         return null;
     }
     const respond = (answer) => RespondToOffer(current.id, answer).catch(() => {});
     return html`
-        <section class="offer" role="alertdialog" aria-label="Incoming files">
+        <div class="modal-backdrop">
+        <section class="modal offer" role="alertdialog" aria-modal="true" aria-label="Incoming files">
             <p><strong>${current.device}</strong> wants to send ${offerSummary(current)}</p>
             ${current.count > 1 && html`<p class="hint">${current.names.join(', ')}${current.count > current.names.length ? '…' : ''}</p>`}
             <div class="offer-actions">
@@ -26,5 +40,6 @@ export function Offers({offers}) {
                 <button class="action" type="button" data-offer-decline onClick=${() => respond(false)}>Decline</button>
             </div>
             ${offers.length > 1 && html`<p class="hint">${offers.length - 1} more waiting</p>`}
-        </section>`;
+        </section>
+        </div>`;
 }

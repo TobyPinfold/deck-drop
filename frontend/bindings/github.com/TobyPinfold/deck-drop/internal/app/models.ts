@@ -44,6 +44,11 @@ export interface ReceivedFile {
  */
 export interface Transfer {
     "id": number;
+
+    /**
+     * Direction is DirectionSend or DirectionReceive.
+     */
+    "direction": string;
     "name": string;
     "device": string;
     "status": string;

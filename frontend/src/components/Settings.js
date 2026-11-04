@@ -52,8 +52,7 @@ export function Settings({onSaved}) {
     }
 
     return html`
-        <h2>Settings</h2>
-        <div class="panel settings">
+        <div class="settings">
             <label class="field">
                 <span>Device name</span>
                 <input type="text" autocomplete="off" spellcheck=${false}

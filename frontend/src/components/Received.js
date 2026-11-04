@@ -22,7 +22,6 @@ export function Received({settingsVersion}) {
     }, [settingsVersion]);
 
     return html`
-        <h2>Received</h2>
         <div class="panel">
             <button class="action" type="button" onClick=${() => OpenReceiveFolder().then(
                 () => setError(''),

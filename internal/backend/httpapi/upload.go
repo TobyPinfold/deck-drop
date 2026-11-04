@@ -2,11 +2,13 @@ package httpapi
 
 import (
 	"errors"
+	"io"
 	"log/slog"
 	"net/http"
 	"path/filepath"
 	"strconv"
 
+	"github.com/TobyPinfold/deck-drop/internal/identity"
 	"github.com/TobyPinfold/deck-drop/internal/transfer"
 )
 
@@ -44,9 +46,20 @@ func (handler uploadHandler) ServeHTTP(writer http.ResponseWriter, request *http
 		handler.log.Info("receiving file", "file", name, "path", filepath.Join(handler.directory, name))
 	}
 
-	body := http.MaxBytesReader(writer, request.Body, handler.maxChunkSize)
+	var body io.Reader = http.MaxBytesReader(writer, request.Body, handler.maxChunkSize)
+	progress, tracked := handler.receipts.(ProgressListener)
+	fingerprint := identity.PeerFingerprint(request.TLS)
+	total, _ := request.Context().Value(acceptedSizeKey{}).(int64)
+	if tracked {
+		body = &progressReader{reader: body, offset: offset, report: func(received int64) {
+			progress.Receiving(fingerprint, name, received, total)
+		}}
+	}
 
 	if _, err := handler.receiver.WriteChunk(name, offset, body); err != nil {
+		if tracked {
+			progress.ReceiveStopped(fingerprint, name)
+		}
 		handler.writeError(writer, name, err)
 		return
 	}
@@ -70,4 +83,20 @@ func (handler uploadHandler) writeError(writer http.ResponseWriter, name string,
 
 	handler.log.Error("failed to write chunk", "file", name, "error", err)
 	http.Error(writer, "failed to write chunk", http.StatusInternalServerError)
+}
+
+// progressReader reports how far into the file a chunk has been read.
+type progressReader struct {
+	reader io.Reader
+	offset int64
+	report func(received int64)
+}
+
+func (progress *progressReader) Read(buffer []byte) (int, error) {
+	count, err := progress.reader.Read(buffer)
+	if count > 0 {
+		progress.offset += int64(count)
+		progress.report(progress.offset)
+	}
+	return count, err
 }
