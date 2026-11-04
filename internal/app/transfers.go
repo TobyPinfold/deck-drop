@@ -20,9 +20,13 @@ const (
 	StatusDeclined = "declined"
 	StatusQueued   = "queued"
 	StatusSending  = "sending"
-	StatusPaused   = "paused"
-	StatusDone     = "done"
-	StatusFailed   = "failed"
+
+	// StatusReceiving and StatusInterrupted are for files coming in.
+	StatusReceiving   = "receiving"
+	StatusInterrupted = "interrupted"
+	StatusPaused      = "paused"
+	StatusDone        = "done"
+	StatusFailed      = "failed"
 )
 
 // Sender uploads one file to the device at address ("host:port"), which must
@@ -39,13 +43,22 @@ type Offerer interface {
 	Offer(ctx context.Context, address, fingerprint string, paths []string) error
 }
 
+// Transfer directions.
+const (
+	DirectionSend    = "send"
+	DirectionReceive = "receive"
+)
+
 // Transfer is one file queued to be sent to a device.
 type Transfer struct {
-	ID     int    `json:"id"`
-	Name   string `json:"name"`
-	Device string `json:"device"`
-	Status string `json:"status"`
-	Error  string `json:"error"`
+	ID int `json:"id"`
+
+	// Direction is DirectionSend or DirectionReceive.
+	Direction string `json:"direction"`
+	Name      string `json:"name"`
+	Device    string `json:"device"`
+	Status    string `json:"status"`
+	Error     string `json:"error"`
 
 	// Sent and Total are in bytes; Speed is in bytes per second.
 	Sent  int64   `json:"sent"`
@@ -55,6 +68,10 @@ type Transfer struct {
 	path        string
 	address     string
 	fingerprint string
+
+	// lastReport and lastReceived measure the speed of a file coming in.
+	lastReport   time.Time
+	lastReceived int64
 }
 
 // Transfers returns every transfer queued since the app started.
@@ -96,6 +113,7 @@ func (app *App) SendFiles(deviceName string, paths []string) error {
 		ids = append(ids, len(app.transfers)+1)
 		app.transfers = append(app.transfers, Transfer{
 			ID:          len(app.transfers) + 1,
+			Direction:   DirectionSend,
 			Name:        filepath.Base(path),
 			Device:      deviceName,
 			Status:      status,

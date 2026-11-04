@@ -13,6 +13,13 @@ type ReceiptListener interface {
 	Received(name string)
 }
 
+// ProgressListener is optionally implemented by a ReceiptListener to follow
+// uploads as they arrive. total is zero when the accepted size is not known.
+type ProgressListener interface {
+	Receiving(fingerprint, name string, received, total int64)
+	ReceiveStopped(fingerprint, name string)
+}
+
 // NewHandler creates the backend HTTP routes for receiver.
 func NewHandler(
 	receiver *transfer.Receiver,

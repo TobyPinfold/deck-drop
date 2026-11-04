@@ -91,6 +91,7 @@ func (access *Access) requireOffer(nameOf func(*http.Request) string, next http.
 			return
 		}
 
+		request = request.WithContext(context.WithValue(request.Context(), acceptedSizeKey{}, size))
 		recorder := &statusRecorder{ResponseWriter: writer}
 		next.ServeHTTP(recorder, request)
 		if recorder.status == http.StatusNoContent && end >= size {
@@ -98,6 +99,9 @@ func (access *Access) requireOffer(nameOf func(*http.Request) string, next http.
 		}
 	})
 }
+
+// acceptedSizeKey carries the accepted size of the file being uploaded.
+type acceptedSizeKey struct{}
 
 type statusRecorder struct {
 	http.ResponseWriter
