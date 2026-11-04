@@ -11,6 +11,7 @@ import {Received} from './components/Received.js';
 import {Settings} from './components/Settings.js';
 import {Transfers} from './components/Transfers.js';
 import {html} from './html.js';
+import {activeDownloads} from './format.js';
 import {startNavigation} from './input.js';
 
 const NOTICE_MS = 6000;
@@ -53,6 +54,7 @@ export function App() {
         noticeTimer.current = setTimeout(() => setNotice(''), NOTICE_MS);
     }
 
+    const downloads = activeDownloads(transfers);
     const close = () => setDialog(null);
     const pairedFingerprints = new Set(paired.map((peer) => peer.fingerprint));
 
@@ -103,7 +105,13 @@ export function App() {
                 <nav class="actions" aria-label="Actions">
                     <button class="action primary" type="button" onClick=${() => setDialog({name: 'pair'})}>Pair a device</button>
                     <button class="action" type="button" onClick=${() => setDialog({name: 'paired'})}>Paired devices</button>
-                    <button class="action" type="button" onClick=${() => setDialog({name: 'received'})}>Received files</button>
+                    <button class="action" type="button" onClick=${() => setDialog({name: 'received'})}>
+                        Received files
+                        ${downloads > 0 && html`
+                            <span class="busy" role="status" aria-label=${downloads === 1 ? 'Downloading a file' : `Downloading ${downloads} files`}>
+                                <span class="spinner" aria-hidden="true"></span>${downloads > 1 && html`<span class="busy-count">${downloads}</span>`}
+                            </span>`}
+                    </button>
                     <button class="action" type="button" onClick=${() => setDialog({name: 'settings'})}>Settings</button>
                 </nav>
                 <${Transfers} transfers=${transfers} setHint=${notify} />

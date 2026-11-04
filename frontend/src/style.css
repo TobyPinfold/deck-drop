@@ -544,6 +544,25 @@ main > h2 {
     animation: fade-in 0.3s ease both;
 }
 
+.busy {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-left: 12px;
+    vertical-align: middle;
+}
+
+.spinner {
+    width: 18px;
+    height: 18px;
+    border: 3px solid rgba(255, 255, 255, 0.25);
+    border-top-color: currentColor;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
 /* Dialogs */
 
 .modal-backdrop {

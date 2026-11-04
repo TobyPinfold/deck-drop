@@ -22,6 +22,9 @@ export function transferStatusText(transfer) {
     if (transfer.status === 'failed') {
         return `Failed: ${transfer.error}`;
     }
+    if (transfer.status === 'interrupted') {
+        return 'Interrupted, waiting for the other device to continue';
+    }
     if (transfer.status === 'waiting') {
         return 'Waiting for the other device to accept';
     }
@@ -33,8 +36,13 @@ export function transferDetailText(transfer) {
         return '';
     }
     const progress = `${formatBytes(transfer.sent)} of ${formatBytes(transfer.total)}`;
-    const showSpeed = transfer.status === 'sending' && transfer.speed > 0;
+    const showSpeed = (transfer.status === 'sending' || transfer.status === 'receiving') && transfer.speed > 0;
     return showSpeed ? `${progress} · ${formatBytes(transfer.speed)}/s` : progress;
+}
+
+// How many files are currently coming in.
+export function activeDownloads(transfers) {
+    return transfers.filter((transfer) => transfer.direction === 'receive' && transfer.status === 'receiving').length;
 }
 
 export function errorMessage(error) {
