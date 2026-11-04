@@ -10,14 +10,16 @@ curl -fsSL "https://go.dev/dl/go${go_version}.linux-amd64.tar.gz" | tar -C /usr/
 export PATH="/usr/local/go/bin:/root/go/bin:$PATH" GOTOOLCHAIN=local GOFLAGS=-buildvcs=false
 
 apt-get update -qq
-apt-get install -y -qq libgtk-3-dev libwebkit2gtk-4.0-dev
+apt-get install -y -qq libgtk-3-dev libwebkit2gtk-4.0-dev libsoup2.4-dev
 
-# Wails 3 asks for webkit2gtk-4.1 with GTK 3, but sniper only ships 4.0. The
-# two differ only in the libsoup version, which Wails does not use, so give
-# pkg-config a 4.1 name for the 4.0 library.
+# Wails 3 asks for webkit2gtk-4.1 and libsoup-3.0 with GTK 3, but sniper only
+# ships webkit2gtk-4.0 and libsoup-2.4. The 4.0 library is the same WebKit
+# built against libsoup 2, and the few soup calls Wails makes (message
+# headers) exist in both, so give pkg-config the names Wails expects.
 mkdir -p /tmp/pkgconfig
-sed 's/^Name:.*/Name: webkit2gtk-4.1/' \
-    "$(pkg-config --variable=pcfiledir webkit2gtk-4.0)/webkit2gtk-4.0.pc" > /tmp/pkgconfig/webkit2gtk-4.1.pc
+pcdir=$(pkg-config --variable=pcfiledir webkit2gtk-4.0)
+sed 's/^Name:.*/Name: webkit2gtk-4.1/' "$pcdir/webkit2gtk-4.0.pc" > /tmp/pkgconfig/webkit2gtk-4.1.pc
+sed 's/^Name:.*/Name: libsoup-3.0/' "$pcdir/libsoup-2.4.pc" > /tmp/pkgconfig/libsoup-3.0.pc
 export PKG_CONFIG_PATH=/tmp/pkgconfig
 
 CGO_ENABLED=0 go install github.com/wailsapp/wails/v3/cmd/wails3@v3.0.0
