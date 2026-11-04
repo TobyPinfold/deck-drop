@@ -18,9 +18,10 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          # Built in Valve's Steam Runtime SDK so it runs on SteamOS.
           - os: ubuntu-latest
             name: linux
-            command: wails3 task linux:create:appimage
+            steamrt: true
             artifacts: bin/*.AppImage
           - os: ubuntu-24.04-arm
             name: linux-arm64
@@ -43,13 +44,25 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: lts/*
+      - name: Build the frontend
+        if: matrix.steamrt
+        run: npm ci && npm run build
+        working-directory: frontend
+      - name: Build in the Steam Linux Runtime 3.0 (sniper) SDK
+        if: matrix.steamrt
+        run: |
+          docker run --rm -v "$PWD":/src -w /src \
+            registry.gitlab.steamos.cloud/steamrt/sniper/sdk:latest \
+            build/linux/steamrt-build.sh
+          sudo chown -R "$(id -u):$(id -g)" bin
       - name: Install Linux build dependencies
-        if: runner.os == 'Linux'
+        if: runner.os == 'Linux' && !matrix.steamrt
         run: sudo apt-get update && sudo apt-get install -y libgtk-4-dev libwebkitgtk-6.0-dev
       - name: Install NSIS
         if: runner.os == 'Windows'
         run: choco install nsis -y
       - run: go install github.com/wailsapp/wails/v3/cmd/wails3@v3.0.0
+        if: ${{ !matrix.steamrt }}
       - name: Add Go binaries to PATH
         shell: bash
         run: echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
@@ -58,6 +71,7 @@ jobs:
         shell: bash
         run: echo "C:\\Program Files (x86)\\NSIS" >> "$GITHUB_PATH"
       - run: ${{ matrix.command }}
+        if: ${{ !matrix.steamrt }}
       - uses: actions/upload-artifact@v4
         with:
           name: deckdrop-${{ matrix.name }}
