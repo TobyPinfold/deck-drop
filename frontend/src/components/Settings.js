@@ -4,66 +4,78 @@ import {errorMessage} from '../format.js';
 import {Toggle} from './Toggle.js';
 import {html} from '../html.js';
 
+// Every change applies as soon as it is made. Text fields apply when they
+// lose focus or Enter is pressed. If a change is rejected, the field goes back
+// to the value in effect.
 export function Settings({onSaved}) {
+    const [current, setCurrent] = useState(null);
     const [deviceName, setDeviceName] = useState('');
     const [port, setPort] = useState('');
-    const [receiveDir, setReceiveDir] = useState('');
-    const [hidden, setHidden] = useState(false);
     const [message, setMessage] = useState('');
 
+    function show(settings) {
+        setCurrent(settings);
+        setDeviceName(settings.deviceName);
+        setPort(String(settings.port));
+    }
+
     useEffect(() => {
-        LoadSettings().then((settings) => {
-            setDeviceName(settings.deviceName);
-            setPort(settings.port);
-            setReceiveDir(settings.receiveDir);
-            setHidden(settings.hidden);
-        });
+        LoadSettings().then(show);
     }, []);
+
+    async function apply(changes) {
+        const next = {...current, ...changes};
+        if (JSON.stringify(next) === JSON.stringify(current)) {
+            return;
+        }
+        setMessage('Applying…');
+        try {
+            await SaveSettings(next);
+            show(next);
+            setMessage('');
+            onSaved();
+        } catch (error) {
+            show(current);
+            setMessage(`Could not apply: ${errorMessage(error)}`);
+        }
+    }
 
     async function chooseFolder() {
         const folder = await ChooseFolder();
         if (folder) {
-            setReceiveDir(folder);
+            apply({receiveDir: folder});
         }
     }
 
-    async function save(event) {
-        event.preventDefault();
-        setMessage('Saving…');
-        try {
-            await SaveSettings({deviceName, receiveDir, port: Number(port), hidden});
-            setMessage('Saved');
-            onSaved();
-        } catch (error) {
-            setMessage(`Could not save: ${errorMessage(error)}`);
-        }
+    if (!current) {
+        return null;
     }
 
     return html`
         <h2>Settings</h2>
-        <form class="panel settings" onSubmit=${save}>
+        <div class="panel settings">
             <label class="field">
                 <span>Device name</span>
-                <input type="text" autocomplete="off" spellcheck=${false} required
-                       value=${deviceName} onInput=${(event) => setDeviceName(event.target.value)} />
+                <input type="text" autocomplete="off" spellcheck=${false}
+                       value=${deviceName} onInput=${(event) => setDeviceName(event.target.value)}
+                       onChange=${(event) => apply({deviceName: event.target.value.trim()})} />
             </label>
             <label class="field">
                 <span>Port</span>
-                <input type="number" min="1" max="65535" required
-                       value=${port} onInput=${(event) => setPort(event.target.value)} />
+                <input type="number" min="1" max="65535"
+                       value=${port} onInput=${(event) => setPort(event.target.value)}
+                       onChange=${(event) => apply({port: Number(event.target.value)})} />
             </label>
-            <${Toggle} label="Hide this device from the network" checked=${hidden} onChange=${setHidden} />
+            <${Toggle} label="Hide this device from the network" checked=${current.hidden}
+                       onChange=${(enabled) => apply({hidden: enabled})} />
             <p class="hint">Paired devices that know its address can still send.</p>
             <div class="field">
                 <span>Receive folder</span>
                 <div class="folder">
-                    <code>${receiveDir}</code>
+                    <code>${current.receiveDir}</code>
                     <button class="action" type="button" onClick=${chooseFolder}>Change folder</button>
                 </div>
             </div>
-            <div class="form-actions">
-                <button class="action primary" type="submit">Save</button>
-                <p class="hint" role="status">${message}</p>
-            </div>
-        </form>`;
+            <p class="hint" role="status">${message}</p>
+        </div>`;
 }
