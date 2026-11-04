@@ -15,7 +15,7 @@ function TransferRow({transfer, setHint}) {
     const [label, action] = actions[transfer.status] ?? [];
     return html`
         <li class="transfer" data-status=${transfer.status}>
-            <span class="transfer-name">${transfer.name} ${transfer.direction === 'receive' ? '←' : '→'} ${transfer.device}</span>
+            <span class="transfer-name">${transfer.name} ${transfer.direction === 'receive' ? 'from' : 'to'} ${transfer.device}</span>
             <span class="transfer-status">${transferStatusText(transfer)}</span>
             <div class="bar"><div class="bar-fill" style=${{width: `${transferPercent(transfer)}%`}}></div></div>
             <span class="transfer-detail">${transferDetailText(transfer)}</span>
