@@ -337,10 +337,62 @@ h3 {
     gap: 0.75rem;
 }
 
-.toggle {
+.paired li {
+    flex-wrap: wrap;
+}
+
+.paired-actions {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.switch {
     display: inline-flex;
     align-items: center;
-    gap: 0.4rem;
-    margin-left: auto;
-    margin-right: 0.75rem;
+    gap: 16px;
+    padding: 12px 20px;
+    border: 3px solid transparent;
+    border-radius: 12px;
+    background: var(--tile);
+    color: inherit;
+    font: inherit;
+    font-size: 20px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.switch:focus {
+    outline: none;
+    border-color: #fff;
+    transform: scale(1.03);
+}
+
+.switch-track {
+    position: relative;
+    flex: none;
+    width: 64px;
+    height: 36px;
+    border-radius: 18px;
+    background: var(--muted);
+    transition: background 0.15s;
+}
+
+.switch-thumb {
+    position: absolute;
+    top: 4px;
+    left: 4px;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: #fff;
+    transition: transform 0.15s;
+}
+
+.switch[aria-checked='true'] .switch-track {
+    background: var(--accent);
+}
+
+.switch[aria-checked='true'] .switch-thumb {
+    transform: translateX(28px);
 }
