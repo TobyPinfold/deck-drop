@@ -331,12 +331,40 @@ header p {
 
 /* Pairing */
 
+.code-block { flex: 1; }
+
 .code {
-    margin: 0;
-    font-size: 44px;
-    font-weight: 700;
-    letter-spacing: 0.3em;
+    display: flex;
+    gap: 10px;
+    margin: 0 0 16px;
+}
+
+.code-digit {
+    flex: none;
+    width: 52px;
+    padding: 12px 0;
+    border-radius: var(--radius-small);
+    background: rgba(255, 255, 255, 0.06);
+    font-size: 40px;
+    font-weight: 600;
+    line-height: 1;
+    text-align: center;
     font-variant-numeric: tabular-nums;
+}
+
+.code-timer {
+    height: 4px;
+    margin-bottom: 12px;
+    border-radius: 2px;
+    background: rgba(255, 255, 255, 0.08);
+    overflow: hidden;
+}
+
+.code-timer-fill {
+    height: 100%;
+    border-radius: 2px;
+    background: var(--accent);
+    transition: width 1s linear;
 }
 
 .pairing-entry {
