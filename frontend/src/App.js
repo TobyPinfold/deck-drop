@@ -67,11 +67,9 @@ export function App() {
 
     return html`
         <header>
-            <button class="action exit" type="button" onClick=${() => Quit()}>Exit</button>
-            <div>
-                <h1>DeckDrop</h1>
-                <p>${status}</p>
-            </div>
+            <button class="exit" type="button" aria-label="Exit" title="Exit" onClick=${() => Quit()}>✕</button>
+            <h1>DeckDrop</h1>
+            <p>${status}</p>
         </header>
         <${Offers} offers=${offers} />
         <main class="columns">
