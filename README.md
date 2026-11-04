@@ -30,12 +30,12 @@ Install DeckDrop on both devices, and make sure they are on the same network. De
 
 **1. Pair the devices (once).** Only paired devices can send files to each other.
 
-1. On the device that will *receive*, open **Pairing** and choose **Show pairing code**.
-2. On the device that will *send*, choose **Start pairing mode**, select the receiver in **Nearby devices**, choose **Pair with ...** and enter the six digit code.
+1. On the device that will *receive*, choose **Pair a device**, then **Show a code**.
+2. On the device that will *send*, choose **Pair a device**, then **Enter a code**. Pick the receiver and enter the six digit code.
 
 <img src="docs/images/pairing.png" alt="Pairing code and paired devices" width="558">
 
-**2. Send.** Select the receiver, then choose or drop the files.
+**2. Send.** Select the receiver in **Nearby devices**, then choose **Send files** (or drop files on the window).
 
 **3. Accept.** The receiver asks whether to **Accept** or **Decline** (B declines). Accepted files are saved to `Downloads/DeckDrop` in your home folder, and appear under **Received**.
 

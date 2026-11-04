@@ -1,37 +1,23 @@
-import {useEffect, useState} from 'preact/hooks';
+import {useEffect, useRef, useState} from 'preact/hooks';
 import {
     CancelPairing,
-    GetPairingMode,
-    SetPairingMode,
     PairWith,
-    SetAutoAccept,
+    SetPairingMode,
     StartPairing,
-    Unpair,
 } from '../../bindings/github.com/TobyPinfold/deck-drop/service.js';
-import {Events} from '@wailsio/runtime';
 import {appendDigit, errorMessage, secondsLeft} from '../format.js';
-import {Toggle} from './Toggle.js';
+import {Modal} from './Modal.js';
 import {html} from '../html.js';
 
 const CODE_LENGTH = 6;
 const KEYPAD = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '⌫', '0', 'Pair'];
 
-// Shows a one-time code for another device to enter.
-function ShowCode({paired}) {
+// Shows a one-time code for another device to enter. The code is discarded
+// when this view goes away.
+function ShowCode() {
     const [code, setCode] = useState(null);
     const [now, setNow] = useState(Date.now());
     const [message, setMessage] = useState('');
-
-    // Pairing finished, so the code has been used up.
-    useEffect(() => setCode(null), [paired.length]);
-
-    useEffect(() => {
-        if (!code) {
-            return undefined;
-        }
-        const timer = setInterval(() => setNow(Date.now()), 1000);
-        return () => clearInterval(timer);
-    }, [code]);
 
     async function start() {
         try {
@@ -43,30 +29,35 @@ function ShowCode({paired}) {
         }
     }
 
-    function cancel() {
-        CancelPairing();
-        setCode(null);
-    }
+    useEffect(() => {
+        start();
+        return () => CancelPairing();
+    }, []);
+
+    useEffect(() => {
+        if (!code) {
+            return undefined;
+        }
+        const timer = setInterval(() => setNow(Date.now()), 1000);
+        return () => clearInterval(timer);
+    }, [code]);
 
     const remaining = code ? secondsLeft(code.expiresAt, now) : 0;
     if (code && remaining > 0) {
         return html`
-            <div class="panel">
-                <div class="code-block">
-                    <p class="code" aria-label="Pairing code">
-                        ${[...code.value].map((digit, index) => html`<span key=${index} class="code-digit" aria-hidden="true">${digit}</span>`)}
-                    </p>
-                    <div class="code-timer"><div class="code-timer-fill" style=${{width: `${Math.min(100, remaining / 1.2)}%`}}></div></div>
-                    <p class="hint">Enter this code on the other device. Expires in ${remaining}s.</p>
-                </div>
-                <button class="action" type="button" onClick=${cancel}>Cancel</button>
+            <div class="code-block">
+                <p class="code" aria-label="Pairing code">
+                    ${[...code.value].map((digit, index) => html`<span key=${index} class="code-digit" aria-hidden="true">${digit}</span>`)}
+                </p>
+                <div class="code-timer"><div class="code-timer-fill" style=${{width: `${Math.min(100, remaining / 1.2)}%`}}></div></div>
+                <p class="hint">Enter this code on the other device. Expires in ${remaining}s.</p>
             </div>`;
     }
     return html`
-        <div class="panel">
-            <button class="action" type="button" onClick=${start}>Show pairing code</button>
-            <p class="hint">${message || (code ? 'The code expired.' : 'Let another device pair with this one.')}</p>
-        </div>`;
+        <div class="modal-actions">
+            <button class="action primary" type="button" data-autofocus onClick=${start}>New code</button>
+        </div>
+        <p class="hint">${message || (code ? 'The code expired.' : 'Getting a code…')}</p>`;
 }
 
 // Enter the code another device is showing. The keypad works with the D-pad
@@ -118,102 +109,74 @@ function EnterCode({deviceName, onDone}) {
     }, [digits, busy]);
 
     return html`
-        <div class="panel pairing-entry">
+        <div class="pairing-entry">
             <p>Enter the code shown on <strong>${deviceName}</strong></p>
             <p class="code" aria-label="Entered code">${digits.padEnd(CODE_LENGTH, '•')}</p>
             <div class="keypad">
                 ${KEYPAD.map((key) => html`
                     <button class="${key === 'Pair' ? 'action primary' : 'action'}" type="button" key=${key}
+                            data-autofocus=${key === '5' ? '' : undefined}
                             disabled=${busy || (key === 'Pair' && digits.length < CODE_LENGTH)}
                             onClick=${() => press(key)}>${key}</button>`)}
             </div>
             <p class="hint">${message}</p>
-            <button class="action" type="button" onClick=${onDone}>Cancel</button>
         </div>`;
 }
 
-// Lists unpaired devices nearby for a couple of minutes, so they can be paired.
-function PairingMode() {
-    const [mode, setMode] = useState({enabled: false});
-    const [now, setNow] = useState(Date.now());
-
-    useEffect(() => {
-        GetPairingMode().then(setMode);
-        return Events.On('pairing-mode', (event) => setMode(event.data));
-    }, []);
-
-    useEffect(() => {
-        if (!mode.enabled) {
-            return undefined;
-        }
-        const timer = setInterval(() => setNow(Date.now()), 1000);
-        return () => clearInterval(timer);
-    }, [mode.enabled]);
-
+// Unpaired devices nearby, to pick the one whose code you will enter.
+function ChooseDevice({devices, onChoose}) {
     return html`
-        <div class="panel">
-            <button class="action" type="button" onClick=${() => SetPairingMode(!mode.enabled).then(setMode)}>
-                ${mode.enabled ? 'Stop pairing mode' : 'Start pairing mode'}
-            </button>
-            <p class="hint">${mode.enabled
-                ? `Showing unpaired devices. Turns off in ${secondsLeft(mode.expiresAt, now)}s.`
-                : 'Unpaired devices are hidden. Start pairing mode to find a device to pair with.'}</p>
-        </div>`;
-}
-
-export function Pairing({paired, selectedDevice, selectedIsPaired}) {
-    const [entering, setEntering] = useState(false);
-    const [message, setMessage] = useState('');
-
-    // Pairing with a device that goes away or changes is abandoned.
-    useEffect(() => setEntering(false), [selectedDevice?.name, selectedIsPaired]);
-
-    async function unpair(peer) {
-        try {
-            await Unpair(peer.fingerprint);
-            setMessage('');
-        } catch (error) {
-            setMessage(`Could not unpair: ${errorMessage(error)}`);
-        }
-    }
-
-    async function setAutoAccept(peer, enabled) {
-        try {
-            await SetAutoAccept(peer.fingerprint, enabled);
-            setMessage('');
-        } catch (error) {
-            setMessage(`Could not change the setting: ${errorMessage(error)}`);
-        }
-    }
-
-    const canPair = selectedDevice && !selectedIsPaired;
-    return html`
-        <h2>Pairing</h2>
-        ${entering && canPair
-            ? html`<${EnterCode} deviceName=${selectedDevice.name} onDone=${() => setEntering(false)} />`
-            : html`
-                <div class="panel">
-                    <button class="action" type="button" disabled=${!canPair} onClick=${() => setEntering(true)}>
-                        ${canPair ? `Pair with ${selectedDevice.name}` : 'Pair with selected device'}
+        <p class="hint">Show a code on the other device, then pick it here.</p>
+        <ul class="devices">
+            ${devices.map((device) => html`
+                <li key=${device.name}>
+                    <button class="tile" type="button" onClick=${() => onChoose(device)}>
+                        <span class="tile-name">${device.name}</span>
+                        <span class="tile-address">${device.host}:${device.port}</span>
                     </button>
-                    <p class="hint">${canPair
-                        ? 'Enter the code it shows.'
-                        : 'Select an unpaired device to enter its code.'}</p>
-                </div>`}
-        <${PairingMode} />
-        <${ShowCode} paired=${paired} />
-        <h3>Paired devices</h3>
-        <ul class="paired">
-            ${paired.map((peer) => html`
-                <li key=${peer.fingerprint}>
-                    <span>${peer.name}</span>
-                    <div class="paired-actions">
-                        <${Toggle} label="Always accept" checked=${peer.autoAccept}
-                                   onChange=${(enabled) => setAutoAccept(peer, enabled)} />
-                        <button class="action" type="button" onClick=${() => unpair(peer)}>Unpair</button>
-                    </div>
                 </li>`)}
         </ul>
-        ${paired.length === 0 && html`<p class="empty">No paired devices yet. Only paired devices can send files here.</p>`}
-        ${message && html`<p class="hint">${message}</p>`}`;
+        ${devices.length === 0 && html`
+            <p class="empty searching"><span class="radar" aria-hidden="true"></span>Looking for devices…</p>`}`;
+}
+
+// Walks through pairing: either show a code here, or pick a device and enter
+// the code it shows. It closes itself once the pairing has worked.
+export function PairDialog({devices, paired, onClose, notify}) {
+    const [view, setView] = useState({name: 'menu'});
+    const knownPeers = useRef(new Set(paired.map((peer) => peer.fingerprint)));
+    const pairedFingerprints = new Set(paired.map((peer) => peer.fingerprint));
+
+    // Unpaired devices only show up while pairing mode is on.
+    useEffect(() => () => { SetPairingMode(false); }, []);
+
+    useEffect(() => {
+        const added = paired.find((peer) => !knownPeers.current.has(peer.fingerprint));
+        if (added) {
+            notify(`Paired with ${added.name}`);
+            onClose();
+        }
+    }, [paired.length]);
+
+    function startEntering() {
+        SetPairingMode(true);
+        setView({name: 'choose'});
+    }
+
+    const atMenu = view.name === 'menu';
+    return html`
+        <${Modal} title="Pair a device" focusKey=${view.name} onClose=${atMenu ? onClose : () => setView({name: 'menu'})}
+                  closeLabel=${atMenu ? 'Close' : 'Back'}>
+            ${atMenu && html`
+                <p class="hint">Pairing lets two devices send files to each other. You need to do it once.</p>
+                <div class="choices">
+                    <button class="action primary" type="button" data-autofocus onClick=${() => setView({name: 'show'})}>Show a code</button>
+                    <button class="action primary" type="button" onClick=${startEntering}>Enter a code</button>
+                </div>`}
+            ${view.name === 'show' && html`<${ShowCode} />`}
+            ${view.name === 'choose' && html`
+                <${ChooseDevice} devices=${devices.filter((device) => !pairedFingerprints.has(device.fingerprint))}
+                                 onChoose=${(device) => setView({name: 'enter', device: device.name})} />`}
+            ${view.name === 'enter' && html`<${EnterCode} deviceName=${view.device} onDone=${onClose} />`}
+        <//>`;
 }

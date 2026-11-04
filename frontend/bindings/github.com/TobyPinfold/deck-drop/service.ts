@@ -79,7 +79,8 @@ export function Offers(): $CancellablePromise<app$0.PendingOffer[] | null> {
 }
 
 /**
- * OpenReceiveFolder shows the receive folder in the system file manager.
+ * OpenReceiveFolder shows the receive folder in the system file manager, or in
+ * a file dialog where there is none.
  */
 export function OpenReceiveFolder(): $CancellablePromise<void> {
     return $Call.ByID(1532415790);

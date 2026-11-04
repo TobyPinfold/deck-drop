@@ -37,11 +37,14 @@ function move(direction) {
     }
     lastMoveAt = now;
     const current = document.activeElement;
+    const dialogs = document.querySelectorAll('[aria-modal="true"]');
+    const scope = dialogs[dialogs.length - 1];
     if (!current || current === document.body) {
-        document.querySelector('button:not([disabled]), input:not([disabled])')?.focus();
+        (scope ?? document).querySelector('button:not([disabled]), input:not([disabled])')?.focus();
         return;
     }
-    const next = getNextFocus(current, DIRECTION_KEYS[direction]);
+    // While a dialog is open, focus stays inside the topmost one.
+    const next = getNextFocus(current, DIRECTION_KEYS[direction], scope);
     if (next) {
         focus(next);
     }
