@@ -9,7 +9,7 @@ const STICK_Y = 1;
 const RIGHT_STICK_Y = 3;
 
 export const DEADZONE = 0.5;
-const SCROLL_DEADZONE = 0.2;
+const SCROLL_DEADZONE = 0.3;
 
 const isPressed = (pad, index) => Boolean(pad.buttons[index]?.pressed);
 
@@ -23,16 +23,24 @@ function stickDirection(x, y) {
     return y > 0 ? 'down' : 'up';
 }
 
+// scrollSpeed eases the right stick in: a light tilt scrolls slowly and a full
+// tilt scrolls at full speed, and a drifting stick does nothing. The result is
+// between -1 and 1.
+function scrollSpeed(tilt) {
+    const amount = (Math.abs(tilt) - SCROLL_DEADZONE) / (1 - SCROLL_DEADZONE);
+    return amount > 0 ? Math.sign(tilt) * amount ** 2 : 0;
+}
+
 // readInput returns the navigation input a pad is currently producing.
 export function readInput(pad) {
     const dpad = Object.keys(DPAD).find((direction) => isPressed(pad, DPAD[direction])) ?? null;
-    const scroll = pad.axes[RIGHT_STICK_Y] ?? 0;
+    const tilt = pad.axes[RIGHT_STICK_Y] ?? 0;
 
     return {
         direction: dpad ?? stickDirection(pad.axes[STICK_X] ?? 0, pad.axes[STICK_Y] ?? 0),
         confirm: isPressed(pad, BUTTON_A),
         back: isPressed(pad, BUTTON_B),
-        scroll: Math.abs(scroll) >= SCROLL_DEADZONE ? scroll : 0,
+        scroll: scrollSpeed(tilt),
     };
 }
 

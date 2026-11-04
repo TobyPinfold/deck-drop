@@ -39,8 +39,10 @@ test('reads A as confirm and B as back', () => {
 });
 
 test('reads the right stick as vertical scrolling', () => {
-    assert.equal(readInput(pad({axes: [0, 0, 0, 0.8]})).scroll, 0.8);
-    assert.equal(readInput(pad({axes: [0, 0, 0, 0.1]})).scroll, 0);
+    assert.equal(readInput(pad({axes: [0, 0, 0, 1]})).scroll, 1);
+    assert.equal(readInput(pad({axes: [0, 0, 0, -1]})).scroll, -1);
+    assert.equal(readInput(pad({axes: [0, 0, 0, 0.2]})).scroll, 0);
+    assert.ok(readInput(pad({axes: [0, 0, 0, 0.5]})).scroll < 0.2);
 });
 
 test('an idle pad produces no input', () => {

@@ -2,9 +2,13 @@
 import {createRepeater, readInput} from './gamepad.js';
 import {getNextFocus} from '@bbc/tv-lrud-spatial';
 
-const HOLD_DELAY_MS = 400;
-const HOLD_INTERVAL_MS = 120;
-const SCROLL_SPEED = 24;
+const HOLD_DELAY_MS = 500;
+const HOLD_INTERVAL_MS = 160;
+// Ignores a second move straight after one, in case a button press is
+// reported by both the gamepad and the keyboard.
+const MIN_MOVE_GAP_MS = 100;
+// Pixels per second at a full tilt of the right stick.
+const SCROLL_SPEED = 500;
 
 const DIRECTION_KEYS = {up: 'ArrowUp', down: 'ArrowDown', left: 'ArrowLeft', right: 'ArrowRight'};
 const KEY_DIRECTIONS = {ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right'};
@@ -24,7 +28,14 @@ function focus(element) {
 }
 
 // The library picks the best neighbour, working row by row.
+let lastMoveAt = -Infinity;
+
 function move(direction) {
+    const now = performance.now();
+    if (now - lastMoveAt < MIN_MOVE_GAP_MS) {
+        return;
+    }
+    lastMoveAt = now;
     const current = document.activeElement;
     if (!current || current === document.body) {
         document.querySelector('button:not([disabled]), input:not([disabled])')?.focus();
@@ -46,6 +57,7 @@ export function startNavigation({onBack}) {
         back: createRepeater({delay: Infinity, interval: Infinity}),
     };
     let heldDirection = null;
+    let lastFrame = null;
 
     function poll(now) {
         const pad = [...(navigator.getGamepads?.() ?? [])].find((candidate) => candidate?.connected);
@@ -67,9 +79,11 @@ export function startNavigation({onBack}) {
         if (repeaters.back.fire(input.back, now)) {
             onBack();
         }
-        if (input.scroll !== 0) {
-            scrollableAncestor(document.activeElement)?.scrollBy(0, input.scroll * SCROLL_SPEED);
+        if (input.scroll !== 0 && lastFrame !== null) {
+            const seconds = Math.min(now - lastFrame, 50) / 1000;
+            scrollableAncestor(document.activeElement)?.scrollBy(0, input.scroll * SCROLL_SPEED * seconds);
         }
+        lastFrame = now;
         requestAnimationFrame(poll);
     }
     requestAnimationFrame(poll);
