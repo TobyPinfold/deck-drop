@@ -1,16 +1,13 @@
 // Connects keyboard and gamepad input to focus navigation.
 import {createRepeater, readInput} from './gamepad.js';
-import {findNext} from './navigation.js';
+import {getNextFocus} from '@bbc/tv-lrud-spatial';
 
 const HOLD_DELAY_MS = 400;
 const HOLD_INTERVAL_MS = 120;
 const SCROLL_SPEED = 24;
 
+const DIRECTION_KEYS = {up: 'ArrowUp', down: 'ArrowDown', left: 'ArrowLeft', right: 'ArrowRight'};
 const KEY_DIRECTIONS = {ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right'};
-
-function focusableElements() {
-    return [...document.querySelectorAll('button:not([disabled]), input:not([disabled])')].filter((element) => element.offsetParent !== null);
-}
 
 function scrollableAncestor(element) {
     for (let parent = element?.parentElement; parent; parent = parent.parentElement) {
@@ -26,18 +23,16 @@ function focus(element) {
     element.scrollIntoView({block: 'nearest', inline: 'nearest'});
 }
 
+// The library picks the best neighbour, working row by row.
 function move(direction) {
-    const elements = focusableElements();
-    const current = elements.indexOf(document.activeElement);
-    if (current < 0) {
-        elements[0]?.focus();
+    const current = document.activeElement;
+    if (!current || current === document.body) {
+        document.querySelector('button:not([disabled]), input:not([disabled])')?.focus();
         return;
     }
-
-    const rects = elements.map((element) => element.getBoundingClientRect());
-    const next = findNext(rects[current], rects, direction);
-    if (next >= 0) {
-        focus(elements[next]);
+    const next = getNextFocus(current, DIRECTION_KEYS[direction]);
+    if (next) {
+        focus(next);
     }
 }
 
