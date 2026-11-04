@@ -26,10 +26,14 @@ The macOS and Windows builds are not signed yet. On macOS, right-click the app a
 
 Install DeckDrop on both devices, and make sure they are on the same network. DeckDrop works with a gamepad as well as a mouse: use the D-pad to move, A to select and B to go back.
 
+![Nearby devices and sending](docs/images/devices.png)
+
 **1. Pair the devices (once).** Only paired devices can send files to each other.
 
 1. On the device that will *receive*, open **Pairing** and choose **Show pairing code**.
 2. On the device that will *send*, choose **Start pairing mode**, select the receiver in **Nearby devices**, choose **Pair with ...** and enter the six digit code.
+
+![Pairing code and paired devices](docs/images/pairing.png)
 
 **2. Send.** Select the receiver, then choose or drop the files.
 
