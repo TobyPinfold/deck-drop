@@ -52,8 +52,11 @@ function ShowCode({paired}) {
     if (code && remaining > 0) {
         return html`
             <div class="panel">
-                <div>
-                    <p class="code" aria-label="Pairing code">${code.value}</p>
+                <div class="code-block">
+                    <p class="code" aria-label="Pairing code">
+                        ${[...code.value].map((digit, index) => html`<span key=${index} class="code-digit" aria-hidden="true">${digit}</span>`)}
+                    </p>
+                    <div class="code-timer"><div class="code-timer-fill" style=${{width: `${Math.min(100, remaining / 1.2)}%`}}></div></div>
                     <p class="hint">Enter this code on the other device. Expires in ${remaining}s.</p>
                 </div>
                 <button class="action" type="button" onClick=${cancel}>Cancel</button>
@@ -120,7 +123,7 @@ function EnterCode({deviceName, onDone}) {
             <p class="code" aria-label="Entered code">${digits.padEnd(CODE_LENGTH, '•')}</p>
             <div class="keypad">
                 ${KEYPAD.map((key) => html`
-                    <button class="action" type="button" key=${key}
+                    <button class="${key === 'Pair' ? 'action primary' : 'action'}" type="button" key=${key}
                             disabled=${busy || (key === 'Pair' && digits.length < CODE_LENGTH)}
                             onClick=${() => press(key)}>${key}</button>`)}
             </div>

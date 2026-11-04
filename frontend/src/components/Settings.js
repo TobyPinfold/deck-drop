@@ -62,7 +62,7 @@ export function Settings({onSaved}) {
                 </div>
             </div>
             <div class="form-actions">
-                <button class="action" type="submit">Save</button>
+                <button class="action primary" type="submit">Save</button>
                 <p class="hint" role="status">${message}</p>
             </div>
         </form>`;
