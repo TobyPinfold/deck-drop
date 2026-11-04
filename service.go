@@ -183,3 +183,8 @@ func (service *service) GetPairingMode() app.PairingMode {
 func (service *service) SetPairingMode(enabled bool) app.PairingMode {
 	return service.app.SetPairingMode(enabled)
 }
+
+// Quit closes the app. Shutdown stops transfers and the backend cleanly.
+func (service *service) Quit() {
+	service.desktop.Quit()
+}

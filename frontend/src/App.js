@@ -1,6 +1,6 @@
 import {useEffect, useState} from 'preact/hooks';
 import {Events} from '@wailsio/runtime';
-import {Devices as ListDevices, Info, Offers as ListOffers, PairedDevices, Transfers as ListTransfers} from '../bindings/github.com/TobyPinfold/deck-drop/service.js';
+import {Devices as ListDevices, Info, Offers as ListOffers, PairedDevices, Quit, Transfers as ListTransfers} from '../bindings/github.com/TobyPinfold/deck-drop/service.js';
 import {Devices} from './components/Devices.js';
 import {Offers} from './components/Offers.js';
 import {Pairing} from './components/Pairing.js';
@@ -67,6 +67,7 @@ export function App() {
 
     return html`
         <header>
+            <button class="exit" type="button" aria-label="Exit" title="Exit" onClick=${() => Quit()}>✕</button>
             <h1>DeckDrop</h1>
             <p>${status}</p>
         </header>
