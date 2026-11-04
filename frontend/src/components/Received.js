@@ -9,12 +9,13 @@ const refreshMs = 2000;
 // and its contents may have changed.
 export function Received({settingsVersion}) {
     const [files, setFiles] = useState([]);
-    const [directoryText, setDirectoryText] = useState('');
+    const [directory, setDirectory] = useState('');
+    const [error, setError] = useState('');
 
     const refreshFiles = () => ReceivedFiles().then((received) => setFiles(received ?? []), () => {});
 
     useEffect(() => {
-        ReceiveDir().then(setDirectoryText);
+        ReceiveDir().then(setDirectory);
         refreshFiles();
         const timer = setInterval(refreshFiles, refreshMs);
         return () => clearInterval(timer);
@@ -23,10 +24,10 @@ export function Received({settingsVersion}) {
     return html`
         <h2>Received</h2>
         <div class="panel">
-            <button class="action" type="button" onClick=${() => OpenReceiveFolder().catch((error) => {
-                setDirectoryText(`Could not open the folder: ${errorMessage(error)}`);
-            })}>Open folder</button>
-            <p class="hint">${directoryText}</p>
+            <button class="action" type="button" onClick=${() => OpenReceiveFolder().then(
+                () => setError(''),
+                (failure) => setError(`Could not open the folder: ${errorMessage(failure)}`))}>Open folder</button>
+            <p class="hint">${error || directory}</p>
         </div>
         <ul class="received">
             ${files.map((file) => html`
