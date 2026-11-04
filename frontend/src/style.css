@@ -28,6 +28,12 @@ h2 {
     letter-spacing: 0.08em;
 }
 
+header {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+}
+
 header p {
     margin: 4px 0 0;
     color: var(--muted);

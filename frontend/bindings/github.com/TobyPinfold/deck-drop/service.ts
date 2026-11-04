@@ -107,6 +107,13 @@ export function PauseTransfer(id: number): $CancellablePromise<void> {
 }
 
 /**
+ * Quit closes the app. Shutdown stops transfers and the backend cleanly.
+ */
+export function Quit(): $CancellablePromise<void> {
+    return $Call.ByID(721623430);
+}
+
+/**
  * ReceiveDir is the folder received files are saved to.
  */
 export function ReceiveDir(): $CancellablePromise<string> {
