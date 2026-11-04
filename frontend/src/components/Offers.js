@@ -22,7 +22,7 @@ export function Offers({offers}) {
             <p><strong>${current.device}</strong> wants to send ${offerSummary(current)}</p>
             ${current.count > 1 && html`<p class="hint">${current.names.join(', ')}${current.count > current.names.length ? '…' : ''}</p>`}
             <div class="offer-actions">
-                <button class="action" type="button" ref=${accept} onClick=${() => respond(true)}>Accept</button>
+                <button class="action primary" type="button" ref=${accept} onClick=${() => respond(true)}>Accept</button>
                 <button class="action" type="button" data-offer-decline onClick=${() => respond(false)}>Decline</button>
             </div>
             ${offers.length > 1 && html`<p class="hint">${offers.length - 1} more waiting</p>`}

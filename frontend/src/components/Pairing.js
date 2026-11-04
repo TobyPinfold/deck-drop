@@ -120,7 +120,7 @@ function EnterCode({deviceName, onDone}) {
             <p class="code" aria-label="Entered code">${digits.padEnd(CODE_LENGTH, '•')}</p>
             <div class="keypad">
                 ${KEYPAD.map((key) => html`
-                    <button class="action" type="button" key=${key}
+                    <button class="${key === 'Pair' ? 'action primary' : 'action'}" type="button" key=${key}
                             disabled=${busy || (key === 'Pair' && digits.length < CODE_LENGTH)}
                             onClick=${() => press(key)}>${key}</button>`)}
             </div>

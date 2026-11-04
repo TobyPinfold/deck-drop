@@ -31,7 +31,7 @@ export function Send({selectedName, canSend, hint, setHint}) {
     return html`
         <h2>Send</h2>
         <div class="panel" data-file-drop-target>
-            <button class="action" type="button" disabled=${selectedName === null || !canSend}
+            <button class="action primary" type="button" disabled=${selectedName === null || !canSend}
                     onClick=${async () => sendFiles(await ChooseFiles())}>Choose files</button>
             <p class="hint">${hint}</p>
         </div>`;
