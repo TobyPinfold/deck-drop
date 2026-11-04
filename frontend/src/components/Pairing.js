@@ -10,6 +10,7 @@ import {
 } from '../../bindings/github.com/TobyPinfold/deck-drop/service.js';
 import {Events} from '@wailsio/runtime';
 import {appendDigit, errorMessage, secondsLeft} from '../format.js';
+import {Toggle} from './Toggle.js';
 import {html} from '../html.js';
 
 const CODE_LENGTH = 6;
@@ -203,12 +204,11 @@ export function Pairing({paired, selectedDevice, selectedIsPaired}) {
             ${paired.map((peer) => html`
                 <li key=${peer.fingerprint}>
                     <span>${peer.name}</span>
-                    <label class="toggle">
-                        <input type="checkbox" checked=${peer.autoAccept}
-                               onChange=${(event) => setAutoAccept(peer, event.target.checked)} />
-                        Always accept
-                    </label>
-                    <button class="action small" type="button" onClick=${() => unpair(peer)}>Unpair</button>
+                    <div class="paired-actions">
+                        <${Toggle} label="Always accept" checked=${peer.autoAccept}
+                                   onChange=${(enabled) => setAutoAccept(peer, enabled)} />
+                        <button class="action" type="button" onClick=${() => unpair(peer)}>Unpair</button>
+                    </div>
                 </li>`)}
         </ul>
         ${paired.length === 0 && html`<p class="empty">No paired devices yet. Only paired devices can send files here.</p>`}

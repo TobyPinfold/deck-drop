@@ -1,6 +1,7 @@
 import {useEffect, useState} from 'preact/hooks';
 import {ChooseFolder, SaveSettings, Settings as LoadSettings} from '../../bindings/github.com/TobyPinfold/deck-drop/service.js';
 import {errorMessage} from '../format.js';
+import {Toggle} from './Toggle.js';
 import {html} from '../html.js';
 
 export function Settings({onSaved}) {
@@ -51,10 +52,8 @@ export function Settings({onSaved}) {
                 <input type="number" min="1" max="65535" required
                        value=${port} onInput=${(event) => setPort(event.target.value)} />
             </label>
-            <label class="toggle">
-                <input type="checkbox" checked=${hidden} onChange=${(event) => setHidden(event.target.checked)} />
-                Hide this device from the network (paired devices that know its address can still send)
-            </label>
+            <${Toggle} label="Hide this device from the network" checked=${hidden} onChange=${setHidden} />
+            <p class="hint">Paired devices that know its address can still send.</p>
             <div class="field">
                 <span>Receive folder</span>
                 <div class="folder">
