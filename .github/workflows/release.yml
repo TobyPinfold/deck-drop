@@ -48,11 +48,11 @@ jobs:
         if: matrix.steamrt
         run: npm ci && npm run build
         working-directory: frontend
-      - name: Build in the Steam Linux Runtime 3.0 (sniper) SDK
+      - name: Build in the Steam Linux Runtime 4.0 SDK
         if: matrix.steamrt
         run: |
           docker run --rm -v "$PWD":/src -w /src \
-            registry.gitlab.steamos.cloud/steamrt/sniper/sdk:latest \
+            registry.gitlab.steamos.cloud/steamrt/steamrt4/sdk:latest \
             build/linux/steamrt-build.sh
           sudo chown -R "$(id -u):$(id -g)" bin
       - name: Install Linux build dependencies
