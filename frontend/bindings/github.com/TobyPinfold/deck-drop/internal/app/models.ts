@@ -8,6 +8,11 @@ export interface Info {
     "running": boolean;
     "port": number;
     "error": string;
+
+    /**
+     * Version is the DeckDrop release, or "dev" for a local build.
+     */
+    "version": string;
 }
 
 /**

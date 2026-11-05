@@ -38,6 +38,11 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
+      # Tagged builds carry the tag's version; other builds say "dev".
+      - name: Set the version from the tag
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: bash
+        run: bash build/set-version.sh "$GITHUB_REF_NAME"
       - uses: actions/setup-go@v5
         with:
           go-version: stable
