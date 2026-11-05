@@ -67,3 +67,23 @@ export function createRepeater({delay, interval}) {
         },
     };
 }
+
+// createPressFilter drops a press that one source reports straight after
+// another source reported the same press. In Game Mode, Steam reports a button
+// both as a gamepad button and as a key, which would otherwise act twice: a
+// toggle would flip back, or a dialog would skip a step. Presses from the same
+// source always count, so quick taps still work.
+export function createPressFilter(gap) {
+    const last = new Map();
+
+    return {
+        accept(action, source, now) {
+            const previous = last.get(action);
+            if (previous && previous.source !== source && now - previous.at < gap) {
+                return false;
+            }
+            last.set(action, {source, at: now});
+            return true;
+        },
+    };
+}
