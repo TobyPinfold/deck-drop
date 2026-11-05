@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {test} from 'node:test';
-import {createRepeater, readInput} from './gamepad.js';
+import {createPressFilter, createRepeater, readInput} from './gamepad.js';
 
 function pad({pressed = [], axes = [0, 0, 0, 0]} = {}) {
     const buttons = Array.from({length: 17}, (_, index) => ({pressed: pressed.includes(index)}));
@@ -69,4 +69,44 @@ test('a repeater without repeats fires once per press', () => {
     const repeater = createRepeater({delay: Infinity, interval: Infinity});
     assert.equal(repeater.fire(true, 0), true);
     assert.equal(repeater.fire(true, 100000), false);
+});
+
+test('a press reported by the gamepad and then the keyboard counts once', () => {
+    const presses = createPressFilter(250);
+    assert.equal(presses.accept('confirm', 'gamepad', 0), true);
+    assert.equal(presses.accept('confirm', 'keyboard', 20), false);
+});
+
+test('a press reported by the keyboard and then the gamepad counts once', () => {
+    const presses = createPressFilter(250);
+    assert.equal(presses.accept('back', 'keyboard', 0), true);
+    assert.equal(presses.accept('back', 'gamepad', 30), false);
+});
+
+test('quick presses from one source all count', () => {
+    const presses = createPressFilter(250);
+    assert.equal(presses.accept('confirm', 'gamepad', 0), true);
+    assert.equal(presses.accept('confirm', 'gamepad', 100), true);
+    assert.equal(presses.accept('confirm', 'keyboard', 1000), true);
+    assert.equal(presses.accept('confirm', 'keyboard', 1050), true);
+});
+
+test('quick presses reported twice each count once each', () => {
+    const presses = createPressFilter(250);
+    const accepted = [
+        ['gamepad', 0], ['keyboard', 10], ['gamepad', 150], ['keyboard', 160],
+    ].filter(([source, at]) => presses.accept('confirm', source, at));
+    assert.deepEqual(accepted, [['gamepad', 0], ['gamepad', 150]]);
+});
+
+test('another source counts again after the gap', () => {
+    const presses = createPressFilter(250);
+    presses.accept('confirm', 'gamepad', 0);
+    assert.equal(presses.accept('confirm', 'keyboard', 300), true);
+});
+
+test('different actions do not filter each other', () => {
+    const presses = createPressFilter(250);
+    presses.accept('confirm', 'gamepad', 0);
+    assert.equal(presses.accept('back', 'keyboard', 10), true);
 });

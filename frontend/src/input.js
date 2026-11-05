@@ -1,5 +1,5 @@
 // Connects keyboard and gamepad input to focus navigation.
-import {createRepeater, readInput} from './gamepad.js';
+import {createPressFilter, createRepeater, readInput} from './gamepad.js';
 import {getNextFocus} from '@bbc/tv-lrud-spatial';
 
 const HOLD_DELAY_MS = 500;
@@ -7,11 +7,14 @@ const HOLD_INTERVAL_MS = 160;
 // Ignores a second move straight after one, in case a button press is
 // reported by both the gamepad and the keyboard.
 const MIN_MOVE_GAP_MS = 100;
+// How long after one source reports A or B to ignore the other reporting it.
+const DUPLICATE_PRESS_MS = 250;
 // Pixels per second at a full tilt of the right stick.
 const SCROLL_SPEED = 500;
 
 const DIRECTION_KEYS = {up: 'ArrowUp', down: 'ArrowDown', left: 'ArrowLeft', right: 'ArrowRight'};
 const KEY_DIRECTIONS = {ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right'};
+const CONFIRM_KEYS = new Set(['Enter', ' ']);
 
 function scrollableAncestor(element) {
     for (let parent = element?.parentElement; parent; parent = parent.parentElement) {
@@ -20,6 +23,15 @@ function scrollableAncestor(element) {
         }
     }
     return document.scrollingElement;
+}
+
+// confirm presses the focused button. Text fields are left alone, so A does not
+// submit or clear what is being typed.
+function confirm() {
+    const focused = document.activeElement;
+    if (focused && focused !== document.body && focused.tagName !== 'INPUT') {
+        focused.click();
+    }
 }
 
 function focus(element) {
@@ -59,6 +71,7 @@ export function startNavigation({onBack}) {
         confirm: createRepeater({delay: Infinity, interval: Infinity}),
         back: createRepeater({delay: Infinity, interval: Infinity}),
     };
+    const presses = createPressFilter(DUPLICATE_PRESS_MS);
     let heldDirection = null;
     let lastFrame = null;
 
@@ -74,12 +87,10 @@ export function startNavigation({onBack}) {
         if (repeaters.direction.fire(input.direction !== null, now)) {
             move(input.direction);
         }
-        if (repeaters.confirm.fire(input.confirm, now)) {
-            if (document.activeElement?.tagName !== 'INPUT') {
-                document.activeElement?.click();
-            }
+        if (repeaters.confirm.fire(input.confirm, now) && presses.accept('confirm', 'gamepad', now)) {
+            confirm();
         }
-        if (repeaters.back.fire(input.back, now)) {
+        if (repeaters.back.fire(input.back, now) && presses.accept('back', 'gamepad', now)) {
             onBack();
         }
         if (input.scroll !== 0 && lastFrame !== null) {
@@ -98,8 +109,23 @@ export function startNavigation({onBack}) {
         if (direction && !(editing && (direction === 'left' || direction === 'right'))) {
             event.preventDefault();
             move(direction);
+        } else if (CONFIRM_KEYS.has(event.key) && !editing) {
+            // Buttons are pressed here rather than by the browser, so a key
+            // that duplicates A can be dropped. A held key presses once.
+            event.preventDefault();
+            if (!event.repeat && presses.accept('confirm', 'keyboard', performance.now())) {
+                confirm();
+            }
         } else if (event.key === 'Escape') {
-            onBack();
+            if (!event.repeat && presses.accept('back', 'keyboard', performance.now())) {
+                onBack();
+            }
+        }
+    });
+    // Space presses a button when released, so stop that too.
+    document.addEventListener('keyup', (event) => {
+        if (event.key === ' ' && document.activeElement?.tagName !== 'INPUT') {
+            event.preventDefault();
         }
     });
 }
