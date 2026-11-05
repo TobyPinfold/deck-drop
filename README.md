@@ -29,8 +29,24 @@ Download the latest build from the [Releases page](https://github.com/TobyPinfol
 | Windows                     | `deckdrop-amd64-installer.exe` |
 | macOS (Apple Silicon)       | `deckdrop-macos.zip`           |
 
-> [!NOTE]
-> The macOS and Windows builds are not signed yet. On macOS, right-click the app and choose **Open** the first time. On Windows, SmartScreen may warn you; choose **More info**, then **Run anyway**.
+**Steam Deck / Linux:** right-click the AppImage, open **Properties → Permissions** and allow it to run as a program. To open DeckDrop from Game Mode, see [Adding DeckDrop to Steam](docs/steam.md).
+
+### First launch on macOS and Windows
+
+The macOS and Windows builds aren't signed yet, because signing them needs paid certificates. Your system warns you about unsigned apps the first time you open them. You only need to do this once.
+
+**macOS**
+
+1. Unzip `deckdrop-macos.zip` and move **deckdrop** into your **Applications** folder.
+2. Open it. macOS says it could not verify the app. Choose **Done**.
+3. Open **System Settings → Privacy & Security** and scroll down to **Security**. Next to the message about deckdrop, click **Open Anyway**, then confirm with your password or Touch ID.
+
+After that it opens normally. On macOS 14 and earlier, you can instead right-click the app and choose **Open**.
+
+**Windows**
+
+1. Run `deckdrop-amd64-installer.exe`.
+2. If **Windows protected your PC** appears, choose **More info**, then **Run anyway**.
 
 ## How it works
 
