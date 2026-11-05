@@ -1,5 +1,5 @@
 import {useEffect, useState} from 'preact/hooks';
-import {ChooseFolder, SaveSettings, Settings as LoadSettings} from '../../bindings/github.com/TobyPinfold/deck-drop/service.js';
+import {ChooseFolder, Info, SaveSettings, Settings as LoadSettings} from '../../bindings/github.com/TobyPinfold/deck-drop/service.js';
 import {errorMessage} from '../format.js';
 import {Toggle} from './Toggle.js';
 import {html} from '../html.js';
@@ -12,6 +12,7 @@ export function Settings({onSaved}) {
     const [deviceName, setDeviceName] = useState('');
     const [port, setPort] = useState('');
     const [message, setMessage] = useState('');
+    const [version, setVersion] = useState('');
 
     function show(settings) {
         setCurrent(settings);
@@ -21,6 +22,7 @@ export function Settings({onSaved}) {
 
     useEffect(() => {
         LoadSettings().then(show);
+        Info().then((info) => setVersion(info.version));
     }, []);
 
     async function apply(changes) {
@@ -76,5 +78,6 @@ export function Settings({onSaved}) {
                 </div>
             </div>
             <p class="hint" role="status">${message}</p>
+            ${version && html`<p class="hint version">DeckDrop ${version}</p>`}
         </div>`;
 }

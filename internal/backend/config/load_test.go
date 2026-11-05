@@ -4,9 +4,11 @@ import (
 	"bytes"
 	"errors"
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/TobyPinfold/deck-drop/internal/backend"
+	"github.com/TobyPinfold/deck-drop/internal/version"
 )
 
 func loadConfig(t *testing.T, args []string, environment map[string]string) (backend.Config, error) {
@@ -118,6 +120,19 @@ func TestLoadConfigHelpFlagReturnsErrHelpAndPrintsUsage(t *testing.T) {
 		if !bytes.Contains(output.Bytes(), []byte(want)) {
 			t.Errorf("usage does not mention %q:\n%s", want, output.String())
 		}
+	}
+}
+
+func TestLoadConfigVersionFlagReturnsErrHelpAndPrintsVersion(t *testing.T) {
+	var output bytes.Buffer
+
+	_, err := LoadConfig(backend.DefaultConfig(), []string{"--version"}, &output)
+
+	if !errors.Is(err, ErrHelp) {
+		t.Fatalf("error = %v, want ErrHelp", err)
+	}
+	if got, want := strings.TrimSpace(output.String()), "deckdrop "+version.String(); got != want {
+		t.Errorf("output = %q, want %q", got, want)
 	}
 }
 

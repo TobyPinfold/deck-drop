@@ -43,3 +43,5 @@ DeckDrop is a single binary: a [Wails v3](https://v3.wails.io) window that embed
 ## Releases
 
 Pushing a tag such as `v0.1.0` runs the Release workflow, which builds Linux AppImages (x86_64 and arm64), a Windows installer and a macOS app bundle (zipped, Apple Silicon) and attaches them to a GitHub release. The workflow also runs on pull requests that change `build/` so packaging problems are caught early.
+
+The version comes from the tag: `v0.1.0` builds version `0.1.0`, and a pre-release tag such as `v0.1.0-rc.5` builds `0.1.0-rc.5`. Before building, the workflow runs `build/set-version.sh`, which writes the version into `internal/version/version.txt` (shown in **Settings** and by `deckdrop --version`) and into the macOS, Windows and Linux package metadata. macOS and Windows only allow numbers there, so they get `0.1.0` for a pre-release. Local and untagged builds say `dev`. The script edits tracked files, so don't commit what it changes.

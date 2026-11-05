@@ -9,6 +9,7 @@ import (
 	"github.com/alecthomas/kong"
 
 	"github.com/TobyPinfold/deck-drop/internal/backend"
+	"github.com/TobyPinfold/deck-drop/internal/version"
 )
 
 const (
@@ -19,8 +20,8 @@ const (
 	maxPort = 65535
 )
 
-// ErrHelp is returned by LoadConfig after printing usage because help was
-// requested.
+// ErrHelp is returned by LoadConfig after printing usage or the version
+// because --help or --version was given.
 var ErrHelp = errors.New("help requested")
 
 // options describes the command line. Kong resolves each value from the flag,
@@ -33,6 +34,8 @@ type options struct {
 	Headless bool `help:"Run without the desktop window, only receiving files."`
 	Accept   bool `help:"Accept files from paired devices without asking (headless mode). Without it, all offers are declined."`
 	Pair     bool `help:"Log a one-time pairing code at startup (headless mode)."`
+
+	Version kong.VersionFlag `help:"Print the version and exit."`
 }
 
 // Validate is called by kong after parsing.
@@ -55,8 +58,8 @@ type helpExit struct{}
 
 // LoadConfig builds a Config from args, environment variables and defaults, in
 // that order of precedence. Settings that are not configurable are taken from
-// defaults. Usage is written to output. It returns ErrHelp
-// when help was requested.
+// defaults. Usage and the version are written to output. It returns ErrHelp
+// when help or the version was requested.
 func LoadConfig(defaults backend.Config, args []string, output io.Writer) (config backend.Config, err error) {
 	var parsed options
 	parser, err := kong.New(&parsed,
@@ -68,6 +71,7 @@ func LoadConfig(defaults backend.Config, args []string, output io.Writer) (confi
 			"default_dir":  defaults.ReceiveDir,
 			"default_name": defaults.DeviceName,
 			"max_port":     fmt.Sprint(maxPort),
+			"version":      "deckdrop " + version.String(),
 		},
 		kong.Exit(func(int) { panic(helpExit{}) }),
 	)

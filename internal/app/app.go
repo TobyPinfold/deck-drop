@@ -13,6 +13,7 @@ import (
 	"github.com/TobyPinfold/deck-drop/internal/discovery"
 	"github.com/TobyPinfold/deck-drop/internal/settings"
 	"github.com/TobyPinfold/deck-drop/internal/trust"
+	"github.com/TobyPinfold/deck-drop/internal/version"
 )
 
 // App ties the backend's lifetime to the desktop window's lifetime.
@@ -116,6 +117,8 @@ type Info struct {
 	Running bool   `json:"running"`
 	Port    int    `json:"port"`
 	Error   string `json:"error"`
+	// Version is the DeckDrop release, or "dev" for a local build.
+	Version string `json:"version"`
 }
 
 // New returns an App that will run a backend with config.
@@ -184,6 +187,7 @@ func (app *App) Info() Info {
 		Running: running.Running(),
 		Port:    running.Port(),
 		Error:   app.startError,
+		Version: version.String(),
 	}
 }
 
